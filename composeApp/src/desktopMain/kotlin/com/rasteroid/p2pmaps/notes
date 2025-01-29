@@ -1,0 +1,10 @@
+
+
+
+Screens:
+- Raster Library
+- Add Raster
+
+Raster Library: Rasters available for download from external sources like peers and WMS
+Each raster info card has source icons on it that say whether this raster is available from WMS or peers or both
+

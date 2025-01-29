@@ -11,11 +11,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.rasteroid.p2pmaps.raster.BoundingBox
+import com.rasteroid.p2pmaps.raster.RasterMeta
+import com.rasteroid.p2pmaps.raster.RasterRepository
+import com.rasteroid.p2pmaps.raster.SourcedRasterMeta
+import com.rasteroid.p2pmaps.vm.AddRasterViewModel
 
 @Composable
 fun AddRasterScreen() = Column(
     modifier = Modifier.fillMaxSize()
 ) {
+    val viewModel = remember { AddRasterViewModel() }
+
     // The screen where raster parameters are specified:
     // - bbox: four float coordinates representing the top-left and bottom-right corners of the raster
     // - format: raster file format, string (either "image/png" or "image/jpeg" or "image/tiff").
@@ -27,9 +34,9 @@ fun AddRasterScreen() = Column(
     )
     Spacer(modifier = Modifier.height(16.dp))
     RasterParameterScreen(
-        onSubmit = { bbox, format, width, height, selectedLayers ->
-            println("Submitting raster parameters: " +
-                    "bbox=$bbox, format=$format, width=$width, height=$height, layers=$selectedLayers")
+        onSubmit = { meta ->
+            println("Submitted raster: $meta")
+            viewModel.downloadRaster(meta)
         }
     )
 }
@@ -38,19 +45,15 @@ fun AddRasterScreen() = Column(
 @Composable
 fun RasterParameterScreen(
     onSubmit: (
-        bbox: List<Float>,
-        format: String,
-        width: Float,
-        height: Float,
-        selectedLayers: List<String>
+        meta: RasterMeta
     ) -> Unit,
     availableFormats: List<String> = listOf("image/png", "image/jpeg", "image/tiff"),
     availableLayers: List<String> = listOf("Layer A", "Layer B", "Layer C", "Layer D")
 ) {
-    var bboxLeft by remember { mutableStateOf("0.0") }
-    var bboxTop by remember { mutableStateOf("0.0") }
-    var bboxRight by remember { mutableStateOf("0.0") }
-    var bboxBottom by remember { mutableStateOf("0.0") }
+    var bboxMinX by remember { mutableStateOf("0.0") }
+    var bboxMaxY by remember { mutableStateOf("0.0") }
+    var bboxMaxX by remember { mutableStateOf("0.0") }
+    var bboxMinY by remember { mutableStateOf("0.0") }
 
     var selectedFormat by remember { mutableStateOf(availableFormats.first()) }
     var widthInput by remember { mutableStateOf("512") }
@@ -73,15 +76,15 @@ fun RasterParameterScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
-                            value = bboxLeft,
-                            onValueChange = { bboxLeft = it },
+                            value = bboxMinX,
+                            onValueChange = { bboxMinX = it },
                             label = { Text("Left (X1)") },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                         )
                         OutlinedTextField(
-                            value = bboxTop,
-                            onValueChange = { bboxTop = it },
+                            value = bboxMaxY,
+                            onValueChange = { bboxMaxY = it },
                             label = { Text("Top (Y1)") },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
@@ -92,15 +95,15 @@ fun RasterParameterScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
-                            value = bboxRight,
-                            onValueChange = { bboxRight = it },
+                            value = bboxMaxX,
+                            onValueChange = { bboxMaxX = it },
                             label = { Text("Right (X2)") },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                         )
                         OutlinedTextField(
-                            value = bboxBottom,
-                            onValueChange = { bboxBottom = it },
+                            value = bboxMinY,
+                            onValueChange = { bboxMinY = it },
                             label = { Text("Bottom (Y2)") },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
@@ -158,14 +161,14 @@ fun RasterParameterScreen(
                             onValueChange = { widthInput = it },
                             label = { Text("Width (px)") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
                         )
                         OutlinedTextField(
                             value = heightInput,
                             onValueChange = { heightInput = it },
                             label = { Text("Height (px)") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal)
                         )
                     }
                 }
@@ -203,22 +206,25 @@ fun RasterParameterScreen(
         item {
             Button(
                 onClick = {
-                    // Convert text fields to floats safely
-                    val bboxValues = listOf(
-                        bboxLeft.toFloatOrNull() ?: 0f,
-                        bboxTop.toFloatOrNull() ?: 0f,
-                        bboxRight.toFloatOrNull() ?: 0f,
-                        bboxBottom.toFloatOrNull() ?: 0f
+                    val bbox = BoundingBox(
+                        minX=bboxMinX.toDoubleOrNull() ?: 0.0,
+                        minY=bboxMinY.toDoubleOrNull() ?: 0.0,
+                        maxX=bboxMaxX.toDoubleOrNull() ?: 0.0,
+                        maxY=bboxMaxY.toDoubleOrNull() ?: 0.0,
                     )
-                    val w = widthInput.toFloatOrNull() ?: 0f
-                    val h = heightInput.toFloatOrNull() ?: 0f
+
+                    val width = widthInput.toIntOrNull() ?: 0
+                    val height = heightInput.toIntOrNull() ?: 0
 
                     onSubmit(
-                        bboxValues,
-                        selectedFormat,
-                        w,
-                        h,
-                        selectedLayers
+                        RasterMeta(
+                            format=selectedFormat,
+                            width=width,
+                            height=height,
+                            layers=selectedLayers,
+                            time="abc", // TODO: placeholder
+                            boundingBox=bbox
+                        )
                     )
                 },
                 modifier = Modifier
