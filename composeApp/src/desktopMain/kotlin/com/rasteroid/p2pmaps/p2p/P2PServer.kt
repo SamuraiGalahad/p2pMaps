@@ -2,7 +2,7 @@ package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.raster.RasterReader
-import com.rasteroid.p2pmaps.raster.meta.RasterInfoRepository
+import com.rasteroid.p2pmaps.raster.meta.InternalRasterRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -25,9 +25,7 @@ suspend fun listen(
             val stream = P2PListenerStream(
                 peerSocket = socket,
                 log = log,
-                isRasterAvailable = { meta ->
-                    RasterInfoRepository.instance.isRasterAvailable(meta)
-                },
+                metaProvider = { InternalRasterRepository.instance.rasterInfos },
                 rasterQuery = { meta, bytesCount ->
                     // some random byte array of size bytesCount for now.
                     reader.readNextChunk(meta, bytesCount)

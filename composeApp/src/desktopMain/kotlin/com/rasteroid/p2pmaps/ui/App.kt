@@ -1,27 +1,42 @@
 package com.rasteroid.p2pmaps.ui
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddLocation
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
+import com.rasteroid.p2pmaps.vm.InternalRastersViewModel
+import com.rasteroid.p2pmaps.vm.LogsViewModel
+import com.rasteroid.p2pmaps.vm.SettingsScreenViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
 fun App() {
-    var currentScreen by remember { mutableStateOf(AppScreen.VIEW_RASTERS) }
+    // We create the screens to so that their state is preserved
+    // when switching between them.
+    val internalRasterVM = remember { InternalRastersViewModel() }
+    val externalRasterVM = remember { ExternalRastersViewModel() }
+    val settingsVM = remember { SettingsScreenViewModel() }
+    val logsVM = remember { LogsViewModel() }
+
+    val screens = listOf(
+        Triple(AppScreen.INTERNAL_RASTERS, Icons.Filled.Menu, "Library"),
+        Triple(AppScreen.EXTERNAL_RASTERS, Icons.Filled.ImageSearch, "Browser"),
+        Triple(AppScreen.SETTINGS, Icons.Filled.Settings, "Settings"),
+        Triple(AppScreen.LOGS, Icons.Filled.Code, "Logs")
+    )
+
+    var currentScreen by remember { mutableStateOf(AppScreen.INTERNAL_RASTERS) }
 
     MaterialTheme {
         Row {
@@ -32,43 +47,24 @@ fun App() {
                     .fillMaxHeight()
                     .background(color = Color(0xff202020))
             ) {
-                MainBarScreenSwitch(
-                    Icons.Filled.Menu,
-                    "View downloaded rasters",
-                    isSelected = currentScreen == AppScreen.VIEW_RASTERS
-                ) {
-                    currentScreen = AppScreen.VIEW_RASTERS
-                }
-                MainBarScreenSwitch(
-                    Icons.Filled.AddLocation,
-                    "Add a raster",
-                    isSelected = currentScreen == AppScreen.ADD_RASTER
-                ) {
-                    currentScreen = AppScreen.ADD_RASTER
-                }
-                MainBarScreenSwitch(
-                    Icons.Filled.Settings,
-                    "Settings",
-                    isSelected = currentScreen == AppScreen.SETTINGS
-                ) {
-                    currentScreen = AppScreen.SETTINGS
-                }
-                MainBarScreenSwitch(
-                    Icons.Filled.Code,
-                    "Logs",
-                    isSelected = currentScreen == AppScreen.LOGS
-                ) {
-                    currentScreen = AppScreen.LOGS
+                screens.forEach { (screen, icon, description) ->
+                    MainBarScreenSwitch(
+                        icon,
+                        description,
+                        isSelected = currentScreen == screen
+                    ) {
+                        currentScreen = screen
+                    }
                 }
             }
             Surface(
                 modifier = Modifier.padding(10.dp)
             ) {
                 when (currentScreen) {
-                    AppScreen.VIEW_RASTERS -> ViewRastersScreen()
-                    AppScreen.ADD_RASTER -> AddRasterScreen()
-                    AppScreen.SETTINGS -> SettingsScreen()
-                    AppScreen.LOGS -> LogsScreen()
+                    AppScreen.INTERNAL_RASTERS -> InternalRastersScreen(internalRasterVM)
+                    AppScreen.EXTERNAL_RASTERS -> ExternalRastersScreen(externalRasterVM)
+                    AppScreen.SETTINGS -> SettingsScreen(settingsVM)
+                    AppScreen.LOGS -> LogsScreen(logsVM)
                 }
             }
         }
@@ -76,8 +72,8 @@ fun App() {
 }
 
 enum class AppScreen {
-    VIEW_RASTERS,
-    ADD_RASTER,
+    INTERNAL_RASTERS,
+    EXTERNAL_RASTERS,
     SETTINGS,
     LOGS
 }

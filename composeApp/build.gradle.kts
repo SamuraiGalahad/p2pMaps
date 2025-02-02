@@ -29,9 +29,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.swing)
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.3")
             implementation(libs.kermit)
-            implementation(libs.hoplite.core)
-            implementation(libs.hoplite.toml)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.tomlkt)
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.compose)
         }
     }
 }

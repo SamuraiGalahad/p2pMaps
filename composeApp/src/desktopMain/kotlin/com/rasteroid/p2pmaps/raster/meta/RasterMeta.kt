@@ -1,4 +1,4 @@
-package com.rasteroid.p2pmaps.raster
+package com.rasteroid.p2pmaps.raster.meta
 
 import kotlinx.serialization.Serializable
 

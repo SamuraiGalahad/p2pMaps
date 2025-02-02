@@ -1,6 +1,5 @@
 package com.rasteroid.p2pmaps.raster.meta
 
-import com.rasteroid.p2pmaps.raster.RasterMeta
 import kotlinx.serialization.Serializable
 import java.nio.file.Path
 

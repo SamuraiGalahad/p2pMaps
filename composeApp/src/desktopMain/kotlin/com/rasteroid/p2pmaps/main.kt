@@ -4,7 +4,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.listen
-import com.rasteroid.p2pmaps.settings.Settings
+import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.ui.App
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

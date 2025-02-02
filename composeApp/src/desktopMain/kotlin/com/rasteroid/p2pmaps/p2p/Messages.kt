@@ -1,6 +1,6 @@
 package com.rasteroid.p2pmaps.p2p
 
-import com.rasteroid.p2pmaps.raster.RasterMeta
+import com.rasteroid.p2pmaps.raster.meta.RasterMeta
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,6 +9,14 @@ sealed class Message {
     @Serializable
     @SerialName("message.close")
     data object Close : Message()
+
+    @Serializable
+    @SerialName("message.query")
+    data object Query : Message()
+
+    @Serializable
+    @SerialName("message.metas")
+    data class Metas(val metas: List<RasterMeta>) : Message()
 
     @Serializable
     @SerialName("message.reply")

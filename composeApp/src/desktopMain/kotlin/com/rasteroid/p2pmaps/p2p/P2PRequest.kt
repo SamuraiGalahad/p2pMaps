@@ -1,9 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.RasterMeta
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.rasteroid.p2pmaps.raster.meta.RasterMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -12,30 +10,29 @@ import java.net.Socket
 
 private val log = Logger.withTag("p2p request")
 
-suspend fun requestRaster(
+fun requestRaster(
     meta: RasterMeta,
     peerHost: String,
     peerPort: Int,
     onDataStart: (Long) -> Unit,
     onDataReceived: (ByteArray) -> Unit,
-): Result<Unit> = withContext(Dispatchers.IO) {
-    runCatching {
+): Result<Unit> = runCatching {
         val socket = Socket(peerHost, peerPort)
         socket.use {
             // Check raster availability.
             log.i("#${socket.inetAddress} Checking if peer has raster $meta")
             sendAndWaitForReply<Message.Reply>(socket, Message.Have(meta))
-                .onFailure { return@withContext Result.failure(it) }
+                .onFailure { return Result.failure(it) }
                 .onSuccess {
                     if (!it.reply)
-                        return@withContext Result.failure(Exception("Peer does not have the requested raster."))
+                        return Result.failure(Exception("Peer does not have the requested raster."))
                 }
 
             // Request raster.
             log.i("#${socket.inetAddress} Requesting raster $meta from peer")
             send(socket, Message.Want(meta))
             val startData = sendAndWaitForReply<Message.StartData>(socket, Message.Want(meta))
-                .getOrElse { return@withContext Result.failure(it) }
+                .getOrElse { return Result.failure(it) }
 
             onDataStart(startData.dataSizeBytes)
 
@@ -45,7 +42,7 @@ suspend fun requestRaster(
             while (receivedBytes < startData.dataSizeBytes) {
                 log.d("#${socket.inetAddress} Waiting for next data chunk")
                 val data = waitForReply<Message.Data>(socket)
-                    .getOrElse { return@withContext Result.failure(it) }
+                    .getOrElse { return Result.failure(it) }
 
                 onDataReceived(data.data)
                 receivedBytes += data.data.size
@@ -68,7 +65,25 @@ suspend fun requestRaster(
             else -> log.w("#$peerHost:$peerPort Error requesting raster $meta from peer", it)
         }
     }
-}
+
+fun requestMetas(
+    peerHost: String,
+    peerPort: Int,
+): Result<List<RasterMeta>> = runCatching {
+        val socket = Socket(peerHost, peerPort)
+        socket.use {
+            log.i("#${socket.inetAddress} Requesting raster metas from peer")
+            val metas = sendAndWaitForReply<Message.Metas>(socket, Message.Query)
+                .getOrElse { return Result.failure(it) }
+            log.i("#${socket.inetAddress} Received ${metas.metas.size} raster metas from peer")
+            metas.metas
+        }
+    }.onFailure {
+        when (it) {
+            is ConnectException -> log.d("#$peerHost:$peerPort Connection refused")
+            else -> log.w("#$peerHost:$peerPort Error requesting raster metas from peer", it)
+        }
+    }
 
 private inline fun <reified ReplyType : Message> sendAndWaitForReply(
     socket: Socket,

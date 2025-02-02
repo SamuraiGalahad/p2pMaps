@@ -1,28 +1,29 @@
 package com.rasteroid.p2pmaps.raster.meta
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.RasterMeta
-import com.rasteroid.p2pmaps.settings.Settings
-import com.rasteroid.p2pmaps.settings.ensureDirectoryExists
+import com.rasteroid.p2pmaps.config.Settings
+import com.rasteroid.p2pmaps.config.ensureDirectoryExists
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.json.encodeToStream
 import java.io.FileInputStream
 import java.nio.file.Path
+import kotlin.io.path.outputStream
 
 private const val RASTER_INFO_EXTENSION = ".rinfo"
 private val log = Logger.withTag("raster repo")
 
 @OptIn(ExperimentalSerializationApi::class)
-class RasterInfoRepository {
+class InternalRasterRepository {
     companion object {
-        val instance = RasterInfoRepository()
+        val instance = InternalRasterRepository()
     }
 
-    private val rasterInfosPath = Settings.APP_CONFIG_PATH.resolve("rinfo")
-    // TODO: may be too large since there could be may files.
+    private val rasterInfosPath = Settings.APP_DATA_PATH.resolve("rinfo")
+    // TODO: may be too large since there could be many files.
     // In the future we probably need to read the directory every time.
-    private val rasterInfos: MutableList<RasterInfo> = mutableListOf()
+    val rasterInfos: MutableList<RasterInfo> = mutableListOf()
 
     init {
         ensureDirectoryExists(rasterInfosPath)
@@ -43,11 +44,6 @@ class RasterInfoRepository {
         log.i("Added ${rasterInfos.size} raster infos from $rasterInfosPath")
     }
 
-    fun isRasterAvailable(meta: RasterMeta): Long {
-        val rasterInfo = rasterInfos.find { it.meta == meta }
-        return rasterInfo?.fileSize ?: 0
-    }
-
     fun getRasterPath(meta: RasterMeta): Result<Path> {
         val rasterInfo = rasterInfos.find { it.meta == meta }
         return if (rasterInfo != null) {
@@ -55,5 +51,17 @@ class RasterInfoRepository {
         } else {
             Result.failure(Exception("Raster not found"))
         }
+    }
+
+    fun onNewRasterSaved(rasterInfo: RasterInfo) {
+        val id = rasterInfo.hashCode()
+        val filename = "$id$RASTER_INFO_EXTENSION"
+
+        runCatching {
+            val stream = rasterInfosPath.resolve(filename).outputStream()
+            stream.use {
+                Json.encodeToStream(rasterInfo, stream)
+            }
+        }.onSuccess { rasterInfos.add(rasterInfo) }
     }
 }

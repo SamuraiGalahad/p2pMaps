@@ -1,16 +1,22 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.RasterMeta
+import com.rasteroid.p2pmaps.raster.meta.RasterMeta
+import com.rasteroid.p2pmaps.raster.meta.RasterInfo
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.net.Socket
 
+
+// 1. meta -> Long (0 if don't have, >0 for size)
+// 2. meta, bytesCount (bytes requested) -> ByteArray
+// 3. Unit -> List<meta>
+
 class P2PListenerStream(
     private val peerSocket: Socket,
     private val log: Logger,
-    val isRasterAvailable: (meta: RasterMeta) -> Long,
+    val metaProvider: () -> List<RasterInfo>,
     val rasterQuery: (meta: RasterMeta, bytesCount: Int) -> ByteArray
 ) {
     enum class State {
@@ -27,6 +33,8 @@ class P2PListenerStream(
     fun listen() {
         while (state != State.CLOSED) {
             log.d("#${peerSocket.inetAddress} Waiting for messages from peer")
+            // TODO: Create one large buffer and copy small buffers into it.
+            // There can be messages that are very large.
             val (bytesRead, buffer) = receive(peerSocket, 1024)
             if (bytesRead == -1) {
                 // Stream closed by the requester.
@@ -49,6 +57,10 @@ class P2PListenerStream(
                 log.d("#${peerSocket.inetAddress} Received Reply: ${message.reply}")
                 onReplyReceived(message.reply)
             }
+            is Message.Query -> {
+                log.d("#${peerSocket.inetAddress} Received Query")
+                onQueryReceived()
+            }
             is Message.Have -> {
                 log.d("#${peerSocket.inetAddress} Received Have: ${message.meta}")
                 onHaveReceived(message.meta)
@@ -67,7 +79,17 @@ class P2PListenerStream(
                         "Received unexpected Data: ${message.data.size}")
                 onCloseReceived()
             } // not expected.
+            is Message.Metas -> {
+                log.w("#${peerSocket.inetAddress} " +
+                        "Received unexpected Metas: ${message.metas.size}")
+                onCloseReceived()
+            } // not expected.
         }
+    }
+
+    private fun onQueryReceived() {
+        val metas = metaProvider().map { it.meta }
+        send(peerSocket, Message.Metas(metas))
     }
 
     private fun onCloseReceived() {
@@ -104,11 +126,11 @@ class P2PListenerStream(
     }
 
     private fun onHaveReceived(meta: RasterMeta) {
-        send(peerSocket, Message.Reply(isRasterAvailable(meta) > 0L))
+        send(peerSocket, Message.Reply(metaProvider().any { it.meta == meta }))
     }
 
     private fun onWantReceived(meta: RasterMeta) {
-        val rasterSize = isRasterAvailable(meta)
+        val rasterSize = metaProvider().find { it.meta == meta }?.fileSize ?: 0L
         if (rasterSize == 0L) {
             send(peerSocket, Message.Reply(false))
             return

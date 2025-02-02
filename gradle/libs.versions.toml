@@ -5,8 +5,9 @@ junit = "4.13.2"
 kotlin = "2.0.21"
 kotlinx-coroutines = "1.9.0"
 kermit = "2.0.4"
-hoplite = "2.9.0"
 kotlinx-serialization = "1.7.3"
+tomlkt = "0.4.0"
+filekit = "0.8.8"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -17,9 +18,10 @@ androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 androidx-material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version.ref = "compose-multiplatform" }
 kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
-hoplite-core = { group = "com.sksamuel.hoplite", name = "hoplite-core", version.ref = "hoplite" }
-hoplite-toml = { group = "com.sksamuel.hoplite", name = "hoplite-toml", version.ref = "hoplite" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+tomlkt = { group = "net.peanuuutz.tomlkt", name = "tomlkt", version.ref = "tomlkt" }
+filekit-core = { group = "io.github.vinceglb", name = "filekit-core", version.ref = "filekit" }
+filekit-compose = { group = "io.github.vinceglb", name = "filekit-compose", version.ref = "filekit" }
 
 [plugins]
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
