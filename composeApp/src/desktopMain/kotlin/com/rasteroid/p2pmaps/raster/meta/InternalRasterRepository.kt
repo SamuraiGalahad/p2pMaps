@@ -45,10 +45,10 @@ class InternalRasterRepository {
         log.i("Added ${rasterInfos.size} raster infos from $rasterInfosPath")
     }
 
-    fun getRasterPath(meta: RasterMeta): Result<Path> {
+    fun getRasterPath(meta: RasterMeta): Result<String> {
         val rasterInfo = rasterInfos.find { it.meta == meta }
         return if (rasterInfo != null) {
-            Result.success(Paths.get(rasterInfo.path))
+            Result.success(rasterInfo.path)
         } else {
             Result.failure(Exception("Raster not found"))
         }

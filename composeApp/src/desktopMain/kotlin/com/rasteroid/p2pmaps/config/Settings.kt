@@ -19,7 +19,7 @@ object Settings {
     const val APP_NAME = "p2pmaps"
     val PLATFORM = when {
         System.getProperty("os.name").lowercase().contains("windows") -> Platform.WINDOWS
-        System.getProperty("os.name").contains("macos") -> Platform.MACOS
+        System.getProperty("os.name").lowercase().contains("macos") -> Platform.MACOS
         else -> Platform.LINUX // Assume Linux
     }
     val PLATFORM_HOME_PATH: String = System.getProperty("user.home")

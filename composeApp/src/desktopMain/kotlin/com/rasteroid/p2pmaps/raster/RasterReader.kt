@@ -11,7 +11,7 @@ class RasterReader {
         if (fileStream == null) {
             val rasterPath = InternalRasterRepository.instance.getRasterPath(meta)
             // TODO: error handling
-            fileStream = FileInputStream(rasterPath.toString())
+            fileStream = FileInputStream(rasterPath.getOrThrow())
         }
         val buffer = ByteArray(bytes)
         fileStream!!.read(buffer)
