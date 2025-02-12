@@ -1,9 +1,9 @@
 package com.rasteroid.p2pmaps.config
 
 import co.touchlab.kermit.Logger
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import net.peanuuutz.tomlkt.Toml
-import kotlinx.serialization.decodeFromString
 import java.nio.file.Path
 import kotlin.io.path.writeText
 

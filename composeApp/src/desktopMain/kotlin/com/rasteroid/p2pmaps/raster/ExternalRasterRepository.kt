@@ -1,21 +1,43 @@
 package com.rasteroid.p2pmaps.raster
 
+import co.touchlab.kermit.Logger
+import com.rasteroid.p2pmaps.raster.source.DownloadableRasterMeta
 import com.rasteroid.p2pmaps.raster.source.type.RasterSource
-import com.rasteroid.p2pmaps.raster.source.type.PersistentPeersRasterSource
-import com.rasteroid.p2pmaps.raster.source.type.TrackerRasterSource
-import com.rasteroid.p2pmaps.raster.source.type.WMSRasterSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class ExternalRasterRepository(
-    val sources: List<RasterSource>
-) {
+private val log = Logger.withTag("external raster repository")
+
+class ExternalRasterRepository {
     companion object {
         // Singleton for now, maybe DI later.
-        val instance = ExternalRasterRepository(
-            sources = listOf(
-                PersistentPeersRasterSource(),
-                TrackerRasterSource("localhost:12345"),
-                WMSRasterSource()
-            )
-        )
+        val instance = ExternalRasterRepository()
+    }
+
+    private val sources = mutableListOf<RasterSource>()
+    private val _rasters = MutableStateFlow<List<DownloadableRasterMeta>>(emptyList())
+    val rasters: StateFlow<List<DownloadableRasterMeta>> = _rasters.asStateFlow()
+
+    fun addSource(source: RasterSource) {
+        sources.add(source)
+    }
+
+    fun removeSource(source: RasterSource) {
+        sources.remove(source)
+    }
+
+    fun refresh(coroutineScope: CoroutineScope) {
+        log.i("Refreshing external rasters")
+        _rasters.value = emptyList()
+        sources.forEach {
+            coroutineScope.launch {
+                it.fetch { meta ->
+                    _rasters.value += DownloadableRasterMeta(it, meta)
+                }
+            }
+        }
     }
 }

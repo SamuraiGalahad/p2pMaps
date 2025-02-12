@@ -9,6 +9,7 @@ import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import java.io.FileInputStream
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.io.path.outputStream
 
 private const val RASTER_INFO_EXTENSION = ".rinfo"
@@ -47,7 +48,7 @@ class InternalRasterRepository {
     fun getRasterPath(meta: RasterMeta): Result<Path> {
         val rasterInfo = rasterInfos.find { it.meta == meta }
         return if (rasterInfo != null) {
-            Result.success(rasterInfo.path)
+            Result.success(Paths.get(rasterInfo.path))
         } else {
             Result.failure(Exception("Raster not found"))
         }

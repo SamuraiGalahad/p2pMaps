@@ -3,6 +3,8 @@ package com.rasteroid.p2pmaps.p2p
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureFileExists
+import com.rasteroid.p2pmaps.raster.ExternalRasterRepository
+import com.rasteroid.p2pmaps.raster.source.type.PersistentPeerRasterSource
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -39,33 +41,39 @@ class PeerRepository(
     init {
         ensureFileExists(peersFilepath)
 
-        peers.addAll(Settings.APP_CONFIG.peers.map { SourcedPeerAddr(true, it) })
+        Settings.APP_CONFIG.peers.forEach {
+            addPersistentPeer(it, false)
+        }
 
-        val tempPeers = runCatching {
+        runCatching {
             Json.decodeFromString<PeerAddrCollection>(peersFilepath.readText())
-        }.getOrDefault(PeerAddrCollection())
-        peers.addAll(tempPeers.peers.map { SourcedPeerAddr(false, it) })
+        }.getOrDefault(PeerAddrCollection()).peers.forEach {
+            addPeer(it, false)
+        }
     }
 
-    fun addPeer(peer: PeerAddr) {
+    fun addPeer(peer: PeerAddr, save: Boolean = true) {
         val result = peers.add(SourcedPeerAddr(false, peer))
-        if (result) {
+        if (result && save) {
             savePeers()
         }
     }
 
-    fun addPersistentPeer(peer: PeerAddr) {
+    fun addPersistentPeer(peer: PeerAddr, save: Boolean = true) {
         val existingPeer = peers.find { it.peerAddr == peer }
         if (existingPeer != null) {
             if (!existingPeer.isPersistent) {
                 peers.remove(existingPeer)
                 peers.add(SourcedPeerAddr(true, peer))
-                savePeers()
-                savePersistentPeers()
+                ExternalRasterRepository.instance.addSource(PersistentPeerRasterSource(peer.host, peer.port))
+                if (save) {
+                    savePeers()
+                    savePersistentPeers()
+                }
             }
         } else {
             peers.add(SourcedPeerAddr(true, peer))
-            savePersistentPeers()
+            if (save) savePersistentPeers()
         }
     }
 
@@ -73,6 +81,7 @@ class PeerRepository(
         peers.find { it.peerAddr == peer }?.let {
             peers.remove(it)
             if (it.isPersistent) {
+                ExternalRasterRepository.instance.removeSource(PersistentPeerRasterSource(peer.host, peer.port))
                 savePersistentPeers()
             } else {
                 savePeers()

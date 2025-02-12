@@ -3,6 +3,7 @@ package com.rasteroid.p2pmaps.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.PeerAddr
@@ -48,9 +50,20 @@ fun PeerSettings(
         }
     }
 
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Peer-to-peer", style = MaterialTheme.typography.h6)
-        Spacer(modifier = Modifier.height(8.dp))
+        Text("Port to listen on for local peers")
+        TextField(
+            value = viewModel.listenerPort,
+            onValueChange = {
+                viewModel.setListenerPortValue(it)
+            },
+            isError = viewModel.listenerPortIsError,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            placeholder = { Text("port") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
         Text("Manually add peers")
         TextField(
             value = viewModel.newPeerInput,

@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AppConfig(
-    var peers: List<PeerAddr> = listOf()
-
+    var peers: List<PeerAddr> = listOf(),
+    var listenerPort: Int = 12345,
+    var wmsRemoteUrl: String = ""
 )
