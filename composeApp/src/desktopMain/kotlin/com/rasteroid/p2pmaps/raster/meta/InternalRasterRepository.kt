@@ -13,7 +13,7 @@ import java.nio.file.Paths
 import kotlin.io.path.outputStream
 
 private const val RASTER_INFO_EXTENSION = ".rinfo"
-private val log = Logger.withTag("raster repo")
+private val log = Logger.withTag("internal raster repo")
 
 @OptIn(ExperimentalSerializationApi::class)
 class InternalRasterRepository {
