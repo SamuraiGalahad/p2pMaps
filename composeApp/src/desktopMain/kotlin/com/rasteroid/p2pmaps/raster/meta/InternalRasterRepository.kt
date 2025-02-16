@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import java.io.FileInputStream
+import java.nio.file.Paths
 import kotlin.io.path.outputStream
 
 private const val RASTER_INFO_EXTENSION = ".rinfo"
@@ -55,7 +56,7 @@ class InternalRasterRepository {
 
     fun getRasterSize(path: String): Result<Long> {
         return runCatching {
-            rasterInfosPath.resolve(path).toFile().length()
+            Paths.get(path).toFile().length()
         }
     }
 
