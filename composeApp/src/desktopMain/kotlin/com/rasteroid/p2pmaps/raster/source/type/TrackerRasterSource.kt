@@ -17,7 +17,11 @@ class TrackerRasterSource(
         log.d("Not implemented")
     }
 
-    override fun download(resultStream: OutputStream, raster: RasterMeta) {
+    override fun download(
+        resultStream: OutputStream,
+        raster: RasterMeta,
+        onDataStart: (Long) -> Unit
+    ) {
         log.d("Not implemented")
     }
 

@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import com.rasteroid.p2pmaps.raster.meta.BoundingBox
 import com.rasteroid.p2pmaps.raster.meta.RasterMeta
-import com.rasteroid.p2pmaps.raster.source.DownloadableRasterMeta
 import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
 import io.github.vinceglb.filekit.compose.rememberFileSaverLauncher
 
@@ -27,9 +26,14 @@ fun ExternalRastersScreen(
         contentPadding = PaddingValues(16.dp)
     ) {
         items(rasters) { raster ->
-            RasterCard(raster) {
-                viewModel.showDialog = true
-                viewModel.pickedRaster = raster
+            BaseRasterCard(raster.meta) {
+                // Add a button to download the raster
+                Button(onClick = {
+                    viewModel.showDialog = true
+                    viewModel.pickedRaster = raster
+                }) {
+                    Text("Download")
+                }
             }
         }
     }
@@ -172,41 +176,6 @@ fun ExternalRastersScreen(
                             Text("Download")
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RasterCard(
-    raster: DownloadableRasterMeta,
-    onDownloadClicked: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 120.dp),
-        elevation = 4.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text("Name: ${raster.source.name}")
-                Text("Type: ${raster.source.type}")
-                // Show meta fields. Adjust or expand as needed.
-                Text("Resolution: ${raster.meta.width} x ${raster.meta.height}")
-                Text("Bounding Box: ${raster.meta.boundingBox}")
-            }
-
-            // Download button aligned to bottom-right
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = onDownloadClicked) {
-                    Text("Download")
                 }
             }
         }

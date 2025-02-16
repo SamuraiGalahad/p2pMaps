@@ -18,7 +18,18 @@ data class RasterMeta(
     val layers: List<String>,
     val time: String, // TODO: Maybe we can store it better using some time/date object.
     val boundingBox: BoundingBox
-)
+) {
+    fun toReply(): RasterSourceMetaReply {
+        return RasterSourceMetaReply(
+            format = format,
+            width = width,
+            height = height,
+            layers = layers,
+            time = time,
+            boundingBox = boundingBox
+        )
+    }
+}
 
 // Essentially a copy of RasterMeta, but every field may be nullable.
 // Nullable fields are used to indicate that the field is not given by the source

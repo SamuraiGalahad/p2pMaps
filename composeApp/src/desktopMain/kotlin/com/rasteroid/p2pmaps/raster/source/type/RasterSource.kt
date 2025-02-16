@@ -10,5 +10,9 @@ interface RasterSource {
 
     fun fetch(onRasterFound: (RasterSourceMetaReply) -> Unit)
 
-    fun download(resultStream: OutputStream, raster: RasterMeta)
+    fun download(
+        resultStream: OutputStream,
+        raster: RasterMeta,
+        onDataStart: (Long) -> Unit
+    )
 }

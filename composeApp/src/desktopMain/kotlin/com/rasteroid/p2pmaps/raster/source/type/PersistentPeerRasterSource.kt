@@ -46,7 +46,8 @@ class PersistentPeerRasterSource(
 
     override fun download(
         resultStream: OutputStream,
-        raster: RasterMeta
+        raster: RasterMeta,
+        onDataStart: (Long) -> Unit
     ) {
         // Iterate over all peers and try to request raster.
         // Stop on the first peer that doesn't return failure.
@@ -55,7 +56,10 @@ class PersistentPeerRasterSource(
             log.d("Requesting raster $raster from $peer")
             val result = requestRaster(
                 raster, peer.host, peer.port,
-                onDataStart = { log.d("Started receiving raster $raster from $peer") },
+                onDataStart = {
+                    log.d("Started receiving raster $raster from $peer")
+                    onDataStart(it)
+                },
                 onDataReceived = {
                     log.d("Received ${it.size} bytes of raster $raster from $peer")
                     resultStream.write(it)

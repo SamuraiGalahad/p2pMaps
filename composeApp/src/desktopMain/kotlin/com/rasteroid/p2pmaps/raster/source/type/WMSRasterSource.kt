@@ -21,7 +21,11 @@ class WMSRasterSource(
         
     }
 
-    override fun download(resultStream: OutputStream, raster: RasterMeta) {
+    override fun download(
+        resultStream: OutputStream,
+        raster: RasterMeta,
+        onDataStart: (Long) -> Unit
+    ) {
         if (remoteUrl.isEmpty()) {
             log.w("Remote URL is empty, downloading disabled")
             return

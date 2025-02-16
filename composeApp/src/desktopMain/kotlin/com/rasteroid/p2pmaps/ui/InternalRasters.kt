@@ -1,9 +1,11 @@
 package com.rasteroid.p2pmaps.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ImageSearch
@@ -19,7 +21,21 @@ import com.rasteroid.p2pmaps.vm.InternalRastersViewModel
 fun InternalRastersScreen(
     viewModel: InternalRastersViewModel
 ) {
-    NoInternalRastersFound()
+    if (viewModel.rastersProgress.isEmpty()) {
+        NoInternalRastersFound()
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 300.dp),
+        contentPadding = PaddingValues(8.dp)
+    ) {
+        items(viewModel.rastersProgress) { raster ->
+            BaseRasterCard(raster.info.meta.toReply()) {
+                Text(raster.progress)
+            }
+        }
+    }
 }
 
 @Composable

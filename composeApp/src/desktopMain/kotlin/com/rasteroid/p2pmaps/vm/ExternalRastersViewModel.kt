@@ -37,16 +37,16 @@ class ExternalRastersViewModel : ViewModel() {
         viewModelScope.launch {
             val resultStream = resultFile.outputStream()
             resultStream.use {
-                source.download(resultStream, meta)
+                source.download(resultStream, meta) { rasterSize ->
+                    InternalRasterRepository.instance.onNewRasterSaved(
+                        RasterInfo(
+                            resultFile.absolutePath,
+                            rasterSize,
+                            meta
+                        )
+                    )
+                }
             }
-            val rasterSize = resultFile.length()
-            InternalRasterRepository.instance.onNewRasterSaved(
-                RasterInfo(
-                    resultFile.absolutePath,
-                    rasterSize,
-                    meta
-                )
-            )
         }
     }
 }
