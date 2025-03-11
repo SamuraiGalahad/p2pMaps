@@ -32,8 +32,10 @@ class ExternalRasterRepository {
     fun refresh(coroutineScope: CoroutineScope) {
         log.i("Refreshing external rasters")
         _rasters.value = emptyList()
+        log.d("fetching rasters from ${sources.size} sources")
         sources.forEach {
             coroutineScope.launch {
+                log.d("fetching rasters from ${it.name}")
                 it.fetch { meta ->
                     _rasters.value += DownloadableRasterMeta(it, meta)
                 }

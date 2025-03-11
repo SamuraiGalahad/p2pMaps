@@ -6,6 +6,8 @@ import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.p2p.listen
 import com.rasteroid.p2pmaps.raster.ExternalRasterRepository
+import com.rasteroid.p2pmaps.server.TileRepository
+import com.rasteroid.p2pmaps.server.WMTSServer
 import com.rasteroid.p2pmaps.ui.App
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -26,11 +28,18 @@ fun main() {
 
     val rastersRefreshJob = fixedRateTimer(
         name = "rastersRefresh",
-        initialDelay = 0,
+        initialDelay = 5_000,
         period = 120_000
     ) {
         ExternalRasterRepository.instance.refresh(GlobalScope)
     }
+
+    val server = WMTSServer(
+        port = Settings.APP_CONFIG.localWMTSServerPort,
+        prefix = "/wmts",
+        tileRepository = TileRepository.instance
+    )
+    server.start()
 
     log.i("Starting main application")
     application {
@@ -40,6 +49,7 @@ fun main() {
                 listenJob.cancel()
                 rastersRefreshJob.cancel()
                 exitApplication()
+                server.stop()
             },
             title = Settings.APP_NAME,
         ) {

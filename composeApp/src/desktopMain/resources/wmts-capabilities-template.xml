@@ -1,0 +1,12 @@
+<Capabilities version="1.0.0"
+              xmlns="http://www.opengis.net/wmts/1.0"
+              xmlns:ows="http://www.opengis.net/ows/1.1"
+              xmlns:xlink="http://www.w3.org/1999/xlink">
+    <ows:ServiceIdentification>
+        <ows:Title>p2pmaps Local WMTS Server</ows:Title>
+        <ows:Abstract>A minimal local WMTS server for serving peer-to-peer tiles</ows:Abstract>
+        <ows:ServiceType>OGC WMTS</ows:ServiceType>
+        <ows:ServiceTypeVersion>1.0.0</ows:ServiceTypeVersion>
+    </ows:ServiceIdentification>
+    {{ contents }}
+</Capabilities>

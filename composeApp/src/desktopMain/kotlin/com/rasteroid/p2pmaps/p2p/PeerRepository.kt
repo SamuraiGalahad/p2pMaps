@@ -12,7 +12,7 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
-private val log = Logger.withTag("PeerRepository")
+private val log = Logger.withTag("peer repository")
 
 class PeerRepository(
     private val peersFilepath: Path,
@@ -40,6 +40,8 @@ class PeerRepository(
 
     init {
         ensureFileExists(peersFilepath)
+
+        log.d("Loaded peers from config: ${Settings.APP_CONFIG.peers}")
 
         Settings.APP_CONFIG.peers.forEach {
             addPersistentPeer(it, false)
@@ -73,6 +75,7 @@ class PeerRepository(
             }
         } else {
             peers.add(SourcedPeerAddr(true, peer))
+            ExternalRasterRepository.instance.addSource(PersistentPeerRasterSource(peer.host, peer.port))
             if (save) savePersistentPeers()
         }
     }

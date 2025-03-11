@@ -11,6 +11,15 @@ data class BoundingBox(
 )
 
 @Serializable
+data class TileMeta(
+    val layer: String,
+    val tileMatrixSet: String,
+    val tileMatrix: String,
+    val tileCol: Int,
+    val tileRow: Int
+)
+
+@Serializable
 data class RasterMeta(
     val format: String,
     val width: Int,

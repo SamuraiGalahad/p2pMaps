@@ -30,7 +30,6 @@ fun requestRaster(
 
             // Request raster.
             log.i("#${socket.inetAddress} Requesting raster $meta from peer")
-            send(socket, Message.Want(meta))
             val startData = sendAndWaitForReply<Message.StartData>(socket, Message.Want(meta))
                 .getOrElse { return Result.failure(it) }
 
@@ -102,6 +101,6 @@ private inline fun <reified ReplyType : Message> waitForReply(
     if (bytesRead <= 0) return Result.failure(Exception("Peer unexpectedly closed connection."))
     val reply = ProtoBuf.decodeFromByteArray<Message>(buffer.copyOf(bytesRead))
     if (reply is Message.Close) return Result.failure(Exception("Peer unexpectedly closed connection."))
-    if (reply !is ReplyType) return Result.failure(Exception("Unexpected message received from peer."))
+    if (reply !is ReplyType) return Result.failure(Exception("Unexpected message received from peer: $reply"))
     return Result.success(reply)
 }

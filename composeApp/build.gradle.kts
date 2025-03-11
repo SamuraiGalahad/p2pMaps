@@ -33,6 +33,9 @@ kotlin {
             implementation(libs.tomlkt)
             implementation(libs.filekit.core)
             implementation(libs.filekit.compose)
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.netty)
+            implementation(libs.xmlutil.serialization)
         }
     }
 }
