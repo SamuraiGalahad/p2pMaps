@@ -5,7 +5,7 @@ import androidx.compose.ui.window.application
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.p2p.listen
-import com.rasteroid.p2pmaps.raster.ExternalRasterRepository
+import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.WMTSServer
 import com.rasteroid.p2pmaps.ui.App

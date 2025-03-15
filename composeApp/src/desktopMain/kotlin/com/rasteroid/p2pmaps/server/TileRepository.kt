@@ -2,7 +2,7 @@ package com.rasteroid.p2pmaps.server
 
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
-import com.rasteroid.p2pmaps.raster.RasterFormat
+import com.rasteroid.p2pmaps.tile.RasterFormat
 import java.nio.file.Path
 import kotlin.io.path.forEachDirectoryEntry
 import kotlin.io.path.listDirectoryEntries

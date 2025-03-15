@@ -1,4 +1,4 @@
-package com.rasteroid.p2pmaps.raster.source.type
+package com.rasteroid.p2pmaps.tile.source.type
 
 enum class RasterSourceType {
     LOCAL,

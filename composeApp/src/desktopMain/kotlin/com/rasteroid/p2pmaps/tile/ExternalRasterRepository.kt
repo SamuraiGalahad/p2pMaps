@@ -1,8 +1,8 @@
-package com.rasteroid.p2pmaps.raster
+package com.rasteroid.p2pmaps.tile
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.source.DownloadableRasterMeta
-import com.rasteroid.p2pmaps.raster.source.type.RasterSource
+import com.rasteroid.p2pmaps.tile.source.DownloadableRasterMeta
+import com.rasteroid.p2pmaps.tile.source.type.RasterSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

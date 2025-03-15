@@ -9,8 +9,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
-import com.rasteroid.p2pmaps.raster.meta.BoundingBox
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.BoundingBox
+import com.rasteroid.p2pmaps.tile.meta.RasterMeta
 import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
 import io.github.vinceglb.filekit.compose.rememberFileSaverLauncher
 

@@ -1,8 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
-import com.rasteroid.p2pmaps.raster.meta.RasterInfo
+import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -17,7 +16,7 @@ class P2PListenerStream(
     private val peerSocket: Socket,
     private val log: Logger,
     val metaProvider: () -> List<RasterInfo>,
-    val rasterQuery: (meta: RasterMeta, bytesCount: Int) -> ByteArray
+    val rasterQuery: (meta: TileMeta, bytesCount: Int) -> ByteArray
 ) {
     enum class State {
         NONE,
@@ -26,7 +25,7 @@ class P2PListenerStream(
         CLOSED
     }
 
-    private var wantedMeta: RasterMeta? = null
+    private var wantedMeta: TileMeta? = null
     private var state: State = State.NONE
     private var lastPacketReceivedTime: Long = 0
 
@@ -125,11 +124,11 @@ class P2PListenerStream(
         send(peerSocket, Message.Data(data))
     }
 
-    private fun onHaveReceived(meta: RasterMeta) {
+    private fun onHaveReceived(meta: TileMeta) {
         send(peerSocket, Message.Reply(metaProvider().any { it.meta == meta }))
     }
 
-    private fun onWantReceived(meta: RasterMeta) {
+    private fun onWantReceived(meta: TileMeta) {
         val rasterSize = metaProvider().find { it.meta == meta }?.fileSize ?: 0L
         if (rasterSize == 0L) {
             send(peerSocket, Message.Reply(false))

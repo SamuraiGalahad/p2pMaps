@@ -1,8 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.RasterReader
-import com.rasteroid.p2pmaps.raster.meta.InternalRasterRepository
+import com.rasteroid.p2pmaps.tile.RasterReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

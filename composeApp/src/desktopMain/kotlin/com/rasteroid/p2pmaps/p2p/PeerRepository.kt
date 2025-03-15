@@ -3,10 +3,9 @@ package com.rasteroid.p2pmaps.p2p
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureFileExists
-import com.rasteroid.p2pmaps.raster.ExternalRasterRepository
-import com.rasteroid.p2pmaps.raster.source.type.PersistentPeerRasterSource
+import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
+import com.rasteroid.p2pmaps.tile.source.type.PersistentPeerRasterSource
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.io.path.readText

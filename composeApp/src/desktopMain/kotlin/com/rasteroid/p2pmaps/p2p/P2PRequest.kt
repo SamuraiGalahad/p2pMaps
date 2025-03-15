@@ -1,7 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -11,7 +11,7 @@ import java.net.Socket
 private val log = Logger.withTag("p2p request")
 
 fun requestRaster(
-    meta: RasterMeta,
+    meta: TileMeta,
     peerHost: String,
     peerPort: Int,
     onDataStart: (Long) -> Unit,
@@ -68,7 +68,7 @@ fun requestRaster(
 fun requestMetas(
     peerHost: String,
     peerPort: Int,
-): Result<List<RasterMeta>> = runCatching {
+): Result<List<TileMeta>> = runCatching {
         val socket = Socket(peerHost, peerPort)
         socket.use {
             log.i("#${socket.inetAddress} Requesting raster metas from peer")

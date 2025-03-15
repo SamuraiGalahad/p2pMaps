@@ -6,12 +6,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rasteroid.p2pmaps.config.Settings
-import com.rasteroid.p2pmaps.raster.ExternalRasterRepository
-import com.rasteroid.p2pmaps.raster.meta.InternalRasterRepository
-import com.rasteroid.p2pmaps.raster.meta.RasterInfo
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
-import com.rasteroid.p2pmaps.raster.source.DownloadableRasterMeta
-import com.rasteroid.p2pmaps.raster.source.type.RasterSource
+import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
+import com.rasteroid.p2pmaps.tile.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.source.DownloadableRasterMeta
+import com.rasteroid.p2pmaps.tile.source.type.RasterSource
 import kotlinx.coroutines.launch
 import java.io.File
 

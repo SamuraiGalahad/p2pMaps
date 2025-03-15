@@ -26,6 +26,7 @@ filekit-core = { group = "io.github.vinceglb", name = "filekit-core", version.re
 filekit-compose = { group = "io.github.vinceglb", name = "filekit-compose", version.ref = "filekit" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty", version.ref = "ktor" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 xmlutil-serialization = { group = "io.github.pdvrieze.xmlutil", name = "serialization", version.ref = "xmlutil" }
 
 [plugins]

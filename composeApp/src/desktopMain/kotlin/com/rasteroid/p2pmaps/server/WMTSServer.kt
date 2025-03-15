@@ -1,7 +1,7 @@
 package com.rasteroid.p2pmaps.server
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.RasterFormat
+import com.rasteroid.p2pmaps.tile.RasterFormat
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*

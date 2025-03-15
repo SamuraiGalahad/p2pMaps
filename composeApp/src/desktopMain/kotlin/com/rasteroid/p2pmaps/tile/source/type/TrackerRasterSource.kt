@@ -1,42 +1,44 @@
-package com.rasteroid.p2pmaps.raster.source.type
+package com.rasteroid.p2pmaps.tile.source.type
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
-import com.rasteroid.p2pmaps.raster.meta.RasterSourceMetaReply
+import com.rasteroid.p2pmaps.server.TileRepository
+import com.rasteroid.p2pmaps.tile.RasterMeta
 import java.io.OutputStream
 
-private val log = Logger.withTag("WMS raster source")
+private val log = Logger.withTag("tracker raster source")
 
-class WMSRasterSource(
+class TrackerRasterSource(
     private val remoteUrl: String
 ) : RasterSource {
-    override val name: String = "WMS"
-    override val type: RasterSourceType = RasterSourceType.EXTERNAL_WMS
+    override val name: String = "Tracker"
+    override val type: RasterSourceType = RasterSourceType.PEER
 
-    override fun fetch(onRasterFound: (RasterSourceMetaReply) -> Unit) {
-        if (remoteUrl.isEmpty()) {
-            log.w("Remote URL is empty, fetching disabled")
-            return
-        }
-        
+    init {
+        val ktorClient = 
+    }
+
+    fun announce() {
+        log.d("Announcing tracker")
+        TileRepository.instance.getContents()
+    }
+
+    override fun fetch(onLayerFound: (RasterMeta) -> Unit) {
+        //
     }
 
     override fun download(
         resultStream: OutputStream,
-        raster: RasterMeta,
+        rasterMeta: RasterMeta,
         onDataStart: (Long) -> Unit
     ) {
-        if (remoteUrl.isEmpty()) {
-            log.w("Remote URL is empty, downloading disabled")
-            return
-        }
+        log.d("Not implemented")
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as WMSRasterSource
+        other as TrackerRasterSource
 
         if (remoteUrl != other.remoteUrl) return false
         if (name != other.name) return false

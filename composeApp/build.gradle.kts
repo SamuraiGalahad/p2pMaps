@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.filekit.compose)
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.netty)
+            implementation(libs.ktor.client.core)
             implementation(libs.xmlutil.serialization)
         }
     }

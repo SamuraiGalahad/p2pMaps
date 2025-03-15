@@ -1,11 +1,11 @@
-package com.rasteroid.p2pmaps.raster.source.type
+package com.rasteroid.p2pmaps.tile.source.type
 
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.PeerAddr
 import com.rasteroid.p2pmaps.p2p.requestMetas
 import com.rasteroid.p2pmaps.p2p.requestRaster
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
-import com.rasteroid.p2pmaps.raster.meta.RasterSourceMetaReply
+import com.rasteroid.p2pmaps.tile.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.meta.RasterSourceMetaReply
 import java.io.OutputStream
 
 private val log = Logger.withTag("persistent peer raster source")

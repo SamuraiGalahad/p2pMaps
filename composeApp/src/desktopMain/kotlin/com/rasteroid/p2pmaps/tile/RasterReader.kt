@@ -1,7 +1,6 @@
-package com.rasteroid.p2pmaps.raster
+package com.rasteroid.p2pmaps.tile
 
-import com.rasteroid.p2pmaps.raster.meta.InternalRasterRepository
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.meta.RasterMeta
 import java.io.FileInputStream
 
 class RasterReader {

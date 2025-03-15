@@ -4,8 +4,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rasteroid.p2pmaps.raster.meta.InternalRasterRepository
-import com.rasteroid.p2pmaps.raster.meta.RasterInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch

@@ -1,6 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
-import com.rasteroid.p2pmaps.raster.meta.RasterMeta
+import com.rasteroid.p2pmaps.tile.LayerMeta
+import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -11,38 +12,40 @@ sealed class Message {
     data object Close : Message()
 
     @Serializable
-    @SerialName("message.query")
-    data object Query : Message()
+    @SerialName("message.ok")
+    data object Ok : Message()
 
     @Serializable
-    @SerialName("message.metas")
-    data class Metas(val metas: List<RasterMeta>) : Message()
+    @SerialName("message.rasters")
+    data object Rasters : Message()
 
     @Serializable
-    @SerialName("message.reply")
-    data class Reply(val reply: Boolean) : Message()
-
-    @Serializable
-    @SerialName("message.have")
-    data class Have(val meta: RasterMeta) : Message()
+    @SerialName("message.tile")
+    data class Tile(val meta: TileMeta) : Message()
 
     @Serializable
     @SerialName("message.want")
-    data class Want(val meta: RasterMeta) : Message()
+    data class Want(val layer: String) : Message()
 
     @Serializable
-    @SerialName("message.startData")
-    data class StartData(val dataSizeBytes: Long) : Message()
+    @SerialName("message.query")
+    data class Query(val tileMatrixSet: String) : Message()
 
     @Serializable
-    @SerialName("message.data")
-    data class Data(val data: ByteArray) : Message() {
+    @SerialName("message.tileReply")
+    data class TileReply(val tile: ByteArray) : Message() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-            other as Data
-            return data.contentEquals(other.data)
+            other as TileReply
+            return tile.contentEquals(other.tile)
         }
-        override fun hashCode() = data.contentHashCode()
+        override fun hashCode(): Int {
+            return tile.contentHashCode()
+        }
     }
+
+    @Serializable
+    @SerialName("message.wantReply")
+    data class WantReply(val meta: LayerMeta) : Message()
 }

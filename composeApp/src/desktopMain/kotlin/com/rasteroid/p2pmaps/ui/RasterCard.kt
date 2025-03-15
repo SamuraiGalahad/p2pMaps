@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.rasteroid.p2pmaps.raster.meta.RasterSourceMetaReply
+import com.rasteroid.p2pmaps.tile.meta.RasterSourceMetaReply
 
 @Composable
 fun BaseRasterCard(
