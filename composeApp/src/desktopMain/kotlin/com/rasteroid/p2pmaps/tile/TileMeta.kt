@@ -1,6 +1,8 @@
 package com.rasteroid.p2pmaps.tile
 
 import kotlinx.serialization.Serializable
+import nl.adaptivity.xmlutil.serialization.XmlSerialName
+import nl.adaptivity.xmlutil.serialization.XmlValue
 
 @Serializable
 data class BoundingBox(
@@ -25,38 +27,55 @@ data class TileMeta(
     val format: RasterFormat
 )
 
+// The reply for Message.Rasters call.
+// Additionally, XML-encoded meta for each layer in info.xml.
 @Serializable
-data class LayerMeta(
+data class RasterReply(
+    @XmlSerialName("ows:Title")
     val title: String,
+    @XmlSerialName("ows:WGS84BoundingBox")
     val boundingBox: BoundingBox,
+    @XmlSerialName("ows:Identifier")
     val identifier: String,
-    val formats: List<RasterFormat>,
-    val tileMatrixSets: List<String>
-) {
-    fun toLayerDescription(): String {
-        // Simply transforming layer meta to WMTS format.
-        val sb = StringBuilder("<Layer>\n")
-        sb.append("  <Title>").append(title).append("</Title>\n")
-        sb.append("  <ows:WGS84BoundingBox>\n")
-        sb.append("    <ows:LowerCorner>").append(boundingBox.minX).append(" ").append(boundingBox.minY).append("</ows:LowerCorner>\n")
-        sb.append("    <ows:UpperCorner>").append(boundingBox.maxX).append(" ").append(boundingBox.maxY).append("</ows:UpperCorner>\n")
-        sb.append("  </ows:WGS84BoundingBox>\n")
-        sb.append("  <ows:Identifier>").append(identifier).append("</ows:Identifier>\n")
-        sb.append("  <Style isDefault=\"true\">\n")
-        sb.append("    <ows:Identifier>default</ows:Identifier>\n")
-        sb.append("  </Style>\n")
-        for (format in formats) {
-            sb.append("  <Format>").append(format.getMime()).append("</Format>\n")
-        }
-        for (tileMatrixSet in tileMatrixSets) {
-            sb.append("  <TileMatrixSetLink>\n")
-            sb.append("    <TileMatrixSet>").append(tileMatrixSet).append("</TileMatrixSet>\n")
-            sb.append("  </TileMatrixSetLink>\n")
-        }
-        sb.append("</Layer>\n")
-        return sb.toString()
-    }
-}
+    @XmlSerialName("Style")
+    val styles: List<LayerStyle>,
+    @XmlSerialName("Format")
+    val formats: List<RasterFormat>
+)
 
 @Serializable
-data class
+data class LayerStyle(
+    @XmlSerialName("isDefault")
+    @XmlValue(false) // Making this an attribute rather than a tag.
+    val isDefault: Boolean = true,
+    @XmlSerialName("ows:Identifier")
+    val identifier: String = "_null"
+)
+
+@Serializable
+data class TileMatrixSet(
+    @XmlSerialName("ows:Identifier")
+    val identifier: String,
+    @XmlSerialName("ows:SupportedCRS")
+    val supportedCRS: String,
+    @XmlSerialName("TileMatrix")
+    val tileMatrix: List<TileMatrix>
+)
+
+@Serializable
+data class TileMatrix(
+    @XmlSerialName("ows:Identifier")
+    val identifier: String,
+    @XmlSerialName("ScaleDenominator")
+    val scaleDenominator: Double,
+    @XmlSerialName("TopLeftCorner")
+    val topLeftCorner: Pair<Double, Double>,
+    @XmlSerialName("TileWidth")
+    val tileWidth: Int,
+    @XmlSerialName("TileHeight")
+    val tileHeight: Int,
+    @XmlSerialName("MatrixWidth")
+    val matrixWidth: Int,
+    @XmlSerialName("MatrixHeight")
+    val matrixHeight: Int
+)

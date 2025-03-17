@@ -8,5 +8,6 @@ data class AppConfig(
     var peers: List<PeerAddr> = listOf(),
     var listenerPort: Int = 12345,
     var wmsRemoteUrl: String = "",
-    var localWMTSServerPort: Int = 35267
+    var localWMTSServerPort: Int = 35267,
+    var peerId: String = ""
 )

@@ -3,6 +3,11 @@ package com.rasteroid.p2pmaps.server
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
 import com.rasteroid.p2pmaps.tile.RasterFormat
+import com.rasteroid.p2pmaps.tile.RasterReply
+import com.rasteroid.p2pmaps.tile.TileMatrixSet
+import kotlinx.serialization.decodeFromString
+import nl.adaptivity.xmlutil.serialization.XML
+import java.awt.image.Raster
 import java.nio.file.Path
 import kotlin.io.path.forEachDirectoryEntry
 import kotlin.io.path.listDirectoryEntries
@@ -14,6 +19,36 @@ class TileRepository(
 
     init {
         ensureDirectoryExists(layersDirectoryPath)
+    }
+
+    fun getRasters(): List<RasterReply> {
+        val layerPaths = layersDirectoryPath.listDirectoryEntries()
+        val rasters = mutableListOf<RasterReply>()
+        for (layer in layerPaths) {
+            val layerInfoPath = layer.resolve("info.xml")
+            if (layerInfoPath.toFile().exists()) {
+                val layerInfo = layerInfoPath.toFile().readText()
+                // Serialize XML text into RasterReply.
+                rasters.add(XML.decodeFromString(layerInfo))
+            }
+        }
+        return rasters
+    }
+
+    fun getTileMatrixSet(
+        layer: String,
+        tileMatrixSet: String
+    ): TileMatrixSet? {
+        val tileMatrixSetPath = layersDirectoryPath
+            .resolve(layer)
+            .resolve(tileMatrixSet)
+            .resolve("info.xml")
+        return if (tileMatrixSetPath.toFile().exists()) {
+            val tileMatrixSetInfo = tileMatrixSetPath.toFile().readText()
+            XML.decodeFromString(tileMatrixSetInfo)
+        } else {
+            null
+        }
     }
 
     fun getContents(): String {
@@ -55,11 +90,33 @@ class TileRepository(
         tileMatrix: String,
         tileCol: Int,
         tileRow: Int,
-        format: RasterFormat
+        format: RasterFormat,
+        offsetBytes: Int = 0,
+        limitBytes: Int = Int.MAX_VALUE
     ): ByteArray? {
         val tilePath = resolveTilePath(layer, tileMatrixSet, tileMatrix, tileCol, tileRow, format)
         return if (tilePath.toFile().exists()) {
-            tilePath.toFile().readBytes()
+            tilePath
+                .toFile()
+                .readBytes()
+                .sliceArray(offsetBytes until minOf(offsetBytes + limitBytes,
+                    tilePath.toFile().length().toInt()))
+        } else {
+            null
+        }
+    }
+
+    fun getTileSize(
+        layer: String,
+        tileMatrixSet: String,
+        tileMatrix: String,
+        tileCol: Int,
+        tileRow: Int,
+        format: RasterFormat
+    ): Int? {
+        val tilePath = resolveTilePath(layer, tileMatrixSet, tileMatrix, tileCol, tileRow, format)
+        return if (tilePath.toFile().exists()) {
+            tilePath.toFile().length().toInt()
         } else {
             null
         }

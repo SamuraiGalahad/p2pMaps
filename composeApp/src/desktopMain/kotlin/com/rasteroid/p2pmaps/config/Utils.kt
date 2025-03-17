@@ -94,13 +94,14 @@ fun <T> parseFromFileOrDefault(
     // If not successful, try to create the file and write to it the default content.
     // If that fails, return the default object.
     return runCatching {
-        decoder(path.readText())
-    }.getOrDefault(runCatching {
-        ensureDefaultFileExists(path) {
-            encoder(default())
+        if (path.toFile().exists()) {
+            decoder(path.readText())
+        } else {
+            val defaultValue = default()
+            ensureDefaultFileExists(path) { encoder(defaultValue) }
+            defaultValue
         }
-        default()
-    }.getOrDefault(default()))
+    }.getOrDefault(default())
 }
 
 fun ensureDirectoryExists(path: Path) {

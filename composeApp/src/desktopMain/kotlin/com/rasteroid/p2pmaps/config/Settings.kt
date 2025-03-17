@@ -5,6 +5,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import net.peanuuutz.tomlkt.Toml
 import java.nio.file.Path
+import java.util.UUID
 import kotlin.io.path.writeText
 
 private val log = Logger.withTag("settings")
@@ -39,6 +40,13 @@ object Settings {
         encoder = { Toml.encodeToString(it) },
         decoder = { Toml.decodeFromString(it) }) {
         AppConfig()
+    }
+
+    val PEER_ID = parseFromFileOrDefault(
+        path = APP_DATA_PATH.resolve("peerid"),
+        encoder = { it },
+        decoder = { it }) {
+        UUID.randomUUID().toString()
     }
 
     fun writeAppConfig() {

@@ -1,35 +1,37 @@
 package com.rasteroid.p2pmaps.p2p
 
-import com.rasteroid.p2pmaps.tile.LayerMeta
-import com.rasteroid.p2pmaps.tile.TileMeta
+import com.rasteroid.p2pmaps.tile.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// The main idea is to make a stateless protocol, so that
+// we wouldn't need to track any sessions/individual peer connections.
 @Serializable
 sealed class Message {
-    @Serializable
-    @SerialName("message.close")
-    data object Close : Message()
-
-    @Serializable
-    @SerialName("message.ok")
-    data object Ok : Message()
-
+    // Request a list of available rasters (layer + tile matrix set).
     @Serializable
     @SerialName("message.rasters")
     data object Rasters : Message()
 
+    // Request a specific tile.
     @Serializable
     @SerialName("message.tile")
-    data class Tile(val meta: TileMeta) : Message()
+    data class Tile(val meta: TileMeta, val offsetBytes: Int, val limitBytes: Int) : Message()
+
+    // Request tile size in bytes.
+    @Serializable
+    @SerialName("message.tileSize")
+    data class TileSize(val meta: TileMeta) : Message()
+
+    // Request a description for a raster (layer + tile matrix set):
+    // a list of available tile matrixes.
+    @Serializable
+    @SerialName("message.describe")
+    data class Describe(val raster: RasterMeta) : Message()
 
     @Serializable
-    @SerialName("message.want")
-    data class Want(val layer: String) : Message()
-
-    @Serializable
-    @SerialName("message.query")
-    data class Query(val tileMatrixSet: String) : Message()
+    @SerialName("message.rastersReply")
+    data class RastersReply(val rasters: List<RasterReply>) : Message()
 
     @Serializable
     @SerialName("message.tileReply")
@@ -46,6 +48,10 @@ sealed class Message {
     }
 
     @Serializable
-    @SerialName("message.wantReply")
-    data class WantReply(val meta: LayerMeta) : Message()
+    @SerialName("message.tileSizeReply")
+    data class TileSizeReply(val dataSizeBytes: Int) : Message()
+
+    @Serializable
+    @SerialName("message.describeReply")
+    data class DescribeReply(val tileMatrixSet: TileMatrixSet?) : Message()
 }

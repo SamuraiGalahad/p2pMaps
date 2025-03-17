@@ -3,6 +3,10 @@ package com.rasteroid.p2pmaps.tile.source.type
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.tile.RasterMeta
+import io.ktor.client.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 import java.io.OutputStream
 
 private val log = Logger.withTag("tracker raster source")
@@ -13,13 +17,16 @@ class TrackerRasterSource(
     override val name: String = "Tracker"
     override val type: RasterSourceType = RasterSourceType.PEER
 
-    init {
-        val ktorClient = 
+    val client = HttpClient {
+        install(ContentNegotiation) {
+            json( Json { ignoreUnknownKeys = true })
+        }
     }
 
     fun announce() {
-        log.d("Announcing tracker")
-        TileRepository.instance.getContents()
+        client.post("$remoteUrl/announce") {
+            body = TileRepository.announce()
+        }
     }
 
     override fun fetch(onLayerFound: (RasterMeta) -> Unit) {

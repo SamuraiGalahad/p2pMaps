@@ -1,18 +1,33 @@
 package com.rasteroid.p2pmaps.p2p
 
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import java.net.Socket
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
 
 @OptIn(ExperimentalSerializationApi::class)
-fun send(socket: Socket, message: Message) {
+fun send(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int,
+    message: Message
+) {
     val data = ProtoBuf.encodeToByteArray(message)
-    socket.getOutputStream().write(data)
+    val packet = DatagramPacket(data, data.size, address, port)
+    socket.send(packet)
 }
 
-fun receive(socket: Socket, bytes: Int): Pair<Int, ByteArray> {
+fun receive(
+    socket: DatagramSocket,
+    bytes: Int
+): Pair<Int, ByteArray> {
     val buffer = ByteArray(bytes)
-    val bytesRead = socket.getInputStream().read(buffer)
-    return Pair(bytesRead, buffer)
+    val packet = DatagramPacket(buffer, buffer.size)
+    // Blocking.
+    // TODO: Add timeouts.
+    socket.receive(packet)
+    return packet.length to buffer
 }
