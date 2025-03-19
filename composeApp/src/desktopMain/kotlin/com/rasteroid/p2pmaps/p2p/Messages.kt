@@ -13,6 +13,14 @@ sealed class Message {
     @SerialName("message.rasters")
     data object Rasters : Message()
 
+    @Serializable
+    @SerialName("message.ping")
+    data object Ping : Message()
+
+    @Serializable
+    @SerialName("message.pong")
+    data object Pong : Message()
+
     // Request a specific tile.
     @Serializable
     @SerialName("message.tile")
@@ -23,11 +31,15 @@ sealed class Message {
     @SerialName("message.tileSize")
     data class TileSize(val meta: TileMeta) : Message()
 
+    @Serializable
+    @SerialName("message.layerInfo")
+    data class LayerInfo(val layer: String) : Message()
+
     // Request a description for a raster (layer + tile matrix set):
     // a list of available tile matrixes.
     @Serializable
-    @SerialName("message.describe")
-    data class Describe(val raster: RasterMeta) : Message()
+    @SerialName("message.tileMatrixSetInfo")
+    data class TileMatrixSetInfo(val raster: RasterMeta) : Message()
 
     @Serializable
     @SerialName("message.rastersReply")
@@ -52,6 +64,10 @@ sealed class Message {
     data class TileSizeReply(val dataSizeBytes: Int) : Message()
 
     @Serializable
-    @SerialName("message.describeReply")
-    data class DescribeReply(val tileMatrixSet: TileMatrixSet?) : Message()
+    @SerialName("message.layerInfoReply")
+    data class LayerInfoReply(val raster: RasterReply?) : Message()
+
+    @Serializable
+    @SerialName("message.tileMatrixSetInfoReply")
+    data class TileMatrixSetInfoReply(val tileMatrixSet: TileMatrixSet?) : Message()
 }

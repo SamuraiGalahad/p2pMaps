@@ -47,13 +47,20 @@ fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
     val message = ProtoBuf.decodeFromByteArray<Message>(packet.data)
     peerInfo(packet, "Received ${message.javaClass.simpleName}")
     when (message) {
+        is Message.Ping -> handlePing(socket, packet)
         is Message.Rasters -> handleRasters(socket, packet)
         is Message.Tile -> handleTile(socket, packet, message)
         is Message.TileSize -> handleTileSize(socket, packet, message)
-        is Message.Describe -> handleDescribe(socket, packet, message)
+        is Message.LayerInfo -> handleLayerInfo(socket, packet, message)
+        is Message.TileMatrixSetInfo -> handleTileMatrixSetInfo(socket, packet, message)
         else -> unexpected(packet, message)
     }
 }
+
+private fun handlePing(
+    socket: DatagramSocket,
+    packet: DatagramPacket
+) = send(socket, packet.address, packet.port, Message.Pong)
 
 private fun handleRasters(
     socket: DatagramSocket,
@@ -96,16 +103,25 @@ private fun handleTileSize(
     send(socket, packet.address, packet.port, Message.TileSizeReply(tileSize))
 }
 
-private fun handleDescribe(
+private fun handleLayerInfo(
     socket: DatagramSocket,
     packet: DatagramPacket,
-    message: Message.Describe
+    message: Message.LayerInfo
 ) {
-    val tileMatrixSet = TileRepository.instance.getTileMatrixSet(
+    val layerInfo = TileRepository.instance.getLayerInfo(message.layer)
+    send(socket, packet.address, packet.port, Message.LayerInfoReply(layerInfo))
+}
+
+private fun handleTileMatrixSetInfo(
+    socket: DatagramSocket,
+    packet: DatagramPacket,
+    message: Message.TileMatrixSetInfo
+) {
+    val tileMatrixSetInfo = TileRepository.instance.getTileMatrixSetInfo(
         message.raster.layer,
         message.raster.tileMatrixSet
     )
-    send(socket, packet.address, packet.port, Message.DescribeReply(tileMatrixSet))
+    send(socket, packet.address, packet.port, Message.TileMatrixSetInfoReply(tileMatrixSetInfo))
 }
 
 private fun unexpected(

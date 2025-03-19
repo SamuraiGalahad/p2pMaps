@@ -8,6 +8,7 @@ import com.rasteroid.p2pmaps.p2p.listen
 import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.WMTSServer
+import com.rasteroid.p2pmaps.tile.source.type.TrackerRasterSource
 import com.rasteroid.p2pmaps.ui.App
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,15 @@ fun main() {
     val listenJob = GlobalScope.launch(Dispatchers.IO) {
         listen(Settings.APP_CONFIG.listenerPort)
     }
+
+    // Set up tracker.
+    ExternalRasterRepository.instance.addSource(
+        TrackerRasterSource(
+            Settings.APP_CONFIG.trackerUrl,
+            Settings.APP_CONFIG.trackerPeerDiscoveryUrl,
+            Settings.APP_CONFIG.trackerPeerDiscoveryPort
+        )
+    )
 
     val rastersRefreshJob = fixedRateTimer(
         name = "rastersRefresh",

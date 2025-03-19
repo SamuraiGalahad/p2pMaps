@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
-import com.rasteroid.p2pmaps.vm.InternalRastersViewModel
+import com.rasteroid.p2pmaps.vm.BrowseRastersViewModel
+import com.rasteroid.p2pmaps.vm.DownloadRastersViewModel
 import com.rasteroid.p2pmaps.vm.LogsViewModel
 import com.rasteroid.p2pmaps.vm.SettingsScreenViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -24,8 +24,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun App() {
     // We create the screens to so that their state is preserved
     // when switching between them.
-    val internalRasterVM = remember { InternalRastersViewModel() }
-    val externalRasterVM = remember { ExternalRastersViewModel() }
+    val internalRasterVM = remember { DownloadRastersViewModel() }
+    val externalRasterVM = remember { BrowseRastersViewModel() }
     val settingsVM = remember { SettingsScreenViewModel() }
     val logsVM = remember { LogsViewModel() }
 
@@ -62,7 +62,7 @@ fun App() {
             ) {
                 when (currentScreen) {
                     AppScreen.INTERNAL_RASTERS -> InternalRastersScreen(internalRasterVM)
-                    AppScreen.EXTERNAL_RASTERS -> ExternalRastersScreen(externalRasterVM)
+                    AppScreen.EXTERNAL_RASTERS -> BrowseRastersScreen(externalRasterVM)
                     AppScreen.SETTINGS -> SettingsScreen(settingsVM)
                     AppScreen.LOGS -> LogsScreen(logsVM)
                 }

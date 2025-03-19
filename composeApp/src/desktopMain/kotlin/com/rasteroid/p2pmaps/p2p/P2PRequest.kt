@@ -6,12 +6,42 @@ import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
+import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
 private val log = Logger.withTag("p2p request")
 
 fun getSocketOnAnyAvailablePort(): DatagramSocket = DatagramSocket(0)
+
+fun udpHolePunch(
+    connectionKey: String,
+    peerDiscoveryUrl: String,
+    peerDiscoveryPort: Int
+): Pair<DatagramSocket, PeerAddr> {
+    // Contacting discovery UDP socket on tracker
+    // and trying to establish a connection to a peer by UDP hole punching.
+    val socket = getSocketOnAnyAvailablePort()
+    val buffer = connectionKey.toByteArray()
+    val address = InetAddress.getByName(peerDiscoveryUrl)
+    val packet = DatagramPacket(buffer, buffer.size, address, peerDiscoveryPort)
+
+    // Send and wait for peer address reply from tracker.
+    socket.send(packet)
+    val (bytesReceived, peerBuffer) = receive(socket, 1024)
+
+    // Convert to peer address: address:port.
+    val peerAddressPort = String(peerBuffer.copyOf(bytesReceived)).split(":")
+    val peerAddress = InetAddress.getByName(peerAddressPort[0])
+    val peerPort = peerAddressPort[1].toInt()
+
+    // Send a few packets to peer to try to punch through the NAT.
+    for (i in 0 until 5) {
+        sendAndWaitForReply<Message.Pong>(socket, peerAddress, peerPort, Message.Ping)
+    }
+
+    return Pair(socket, PeerAddr(peerAddressPort[0], peerPort))
+}
 
 fun requestRasters(
     socket: DatagramSocket,
@@ -63,16 +93,28 @@ private fun requestTileSize(
     Message.TileSize(meta)
 )
 
-fun requestDescribe(
+fun requestLayerInfo(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int,
+    layer: String
+) = sendAndWaitForReply<Message.LayerInfoReply>(
+    socket,
+    address,
+    port,
+    Message.LayerInfo(layer)
+)
+
+fun requestTileMatrixSetInfo(
     socket: DatagramSocket,
     address: InetAddress,
     port: Int,
     rasterMeta: RasterMeta
-) = sendAndWaitForReply<Message.DescribeReply>(
+) = sendAndWaitForReply<Message.TileMatrixSetInfoReply>(
     socket,
     address,
     port,
-    Message.Describe(rasterMeta)
+    Message.TileMatrixSetInfo(rasterMeta)
 )
 
 private inline fun <reified ReplyType : Message> sendAndWaitForReply(

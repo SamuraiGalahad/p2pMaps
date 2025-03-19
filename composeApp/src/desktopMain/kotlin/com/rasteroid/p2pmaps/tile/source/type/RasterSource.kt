@@ -1,18 +1,21 @@
 package com.rasteroid.p2pmaps.tile.source.type
 
 import com.rasteroid.p2pmaps.tile.RasterMeta
-import com.rasteroid.p2pmaps.tile.TileMeta
-import java.io.OutputStream
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-interface RasterSource {
-    val name: String
+abstract class RasterSource(
+    val name: String,
     val type: RasterSourceType
+) {
+    protected val _rasters = MutableStateFlow(listOf<RasterMeta>())
+    val rasters: StateFlow<List<RasterMeta>> = _rasters
 
-    fun fetch(onLayerFound: (RasterMeta) -> Unit)
+    abstract suspend fun refresh()
 
-    fun download(
-        resultStream: OutputStream,
+    abstract suspend fun download(
         rasterMeta: RasterMeta,
-        onDataStart: (Long) -> Unit
+        // Received tiles out of all tiles.
+        progressReport: (Int, Int) -> Unit
     )
 }

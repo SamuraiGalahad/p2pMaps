@@ -1,5 +1,6 @@
 package com.rasteroid.p2pmaps.tile
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import nl.adaptivity.xmlutil.serialization.XmlValue
@@ -14,7 +15,9 @@ data class BoundingBox(
 
 @Serializable
 data class RasterMeta(
+    @SerialName("NAME")
     val layer: String,
+    @SerialName("TYPE")
     val tileMatrixSet: String
 )
 
