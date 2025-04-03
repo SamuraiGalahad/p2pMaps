@@ -18,6 +18,11 @@ import com.rasteroid.p2pmaps.vm.DownloadRastersViewModel
 fun InternalRastersScreen(
     viewModel: DownloadRastersViewModel
 ) {
+    if (viewModel.rasters.isEmpty()) {
+        NoInternalRastersFound()
+    } else {
+        
+    }
 }
 
 @Composable

@@ -8,17 +8,19 @@ import kotlinx.serialization.Serializable
 // we wouldn't need to track any sessions/individual peer connections.
 @Serializable
 sealed class Message {
-    // Request a list of available rasters (layer + tile matrix set).
     @Serializable
     @SerialName("message.rasters")
+    // Request a list of available rasters (layer + tile matrix set).
     data object Rasters : Message()
 
     @Serializable
     @SerialName("message.ping")
+    // Keep-alive message between peers.
     data object Ping : Message()
 
     @Serializable
     @SerialName("message.pong")
+    // Reply to keep-alive message.
     data object Pong : Message()
 
     // Request a specific tile.
@@ -31,6 +33,7 @@ sealed class Message {
     @SerialName("message.tileSize")
     data class TileSize(val meta: TileMeta) : Message()
 
+    // Request a description for a layer (raster):
     @Serializable
     @SerialName("message.layerInfo")
     data class LayerInfo(val layer: String) : Message()
