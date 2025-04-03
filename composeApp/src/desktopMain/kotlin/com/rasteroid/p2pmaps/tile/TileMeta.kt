@@ -43,7 +43,15 @@ data class RasterReply(
     @XmlSerialName("Style")
     val styles: List<LayerStyle>,
     @XmlSerialName("Format")
-    val formats: List<RasterFormat>
+    val formats: List<RasterFormat>,
+    @XmlSerialName("TileMatrixSetLink")
+    val tileMatrixSetLinks: List<TileMatrixSetLink>
+)
+
+@Serializable
+data class TileMatrixSetLink(
+    @XmlSerialName("TileMatrixSet")
+    val tileMatrixSet: String
 )
 
 @Serializable
