@@ -1,7 +1,7 @@
 package com.rasteroid.p2pmaps.server
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.tile.RasterFormat
+import com.rasteroid.p2pmaps.tile.TileFormat
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -103,7 +103,7 @@ class WMTSServer(
             return
         }
 
-        val format = RasterFormat.fromMime(call.request.queryParameters["Format"]?.lowercase() ?: "")
+        val format = TileFormat.fromMime(call.request.queryParameters["Format"]?.lowercase() ?: "")
         if (format == null) {
             call.respond(HttpStatusCode.BadRequest, "Unsupported format")
             return

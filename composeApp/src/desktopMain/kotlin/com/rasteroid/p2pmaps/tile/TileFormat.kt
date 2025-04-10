@@ -1,11 +1,11 @@
 package com.rasteroid.p2pmaps.tile
 
-enum class RasterFormat {
+enum class TileFormat {
     PNG,
     JPEG;
 
     companion object {
-        fun fromMime(mime: String): RasterFormat? = when (mime) {
+        fun fromMime(mime: String): TileFormat? = when (mime) {
             "image/png" -> PNG
             "image/jpeg" -> JPEG
             else -> null

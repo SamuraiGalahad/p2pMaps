@@ -4,8 +4,8 @@ import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.*
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.dto.TrackerRequestPeers
-import com.rasteroid.p2pmaps.tile.RasterFormat
-import com.rasteroid.p2pmaps.tile.RasterMeta
+import com.rasteroid.p2pmaps.tile.LayerTMS
+import com.rasteroid.p2pmaps.tile.TileFormat
 import com.rasteroid.p2pmaps.tile.TileMeta
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -56,7 +56,7 @@ class TrackerRasterSource(
             .body()
     }
 
-    private suspend fun requestRasters(): List<RasterMeta> {
+    private suspend fun requestRasters(): List<LayerTMS> {
         // Request available layers + tileMatrixSets.
         return client
             .get("$remoteUrl/maps")
@@ -64,9 +64,11 @@ class TrackerRasterSource(
     }
 
     override suspend fun download(
-        rasterMeta: RasterMeta,
+        rasterMeta: LayerTMS,
         progressReport: (Int, Int) -> Unit
     ) {
+        // TODO.
+        /*
         // Request peers for this raster.
         val peers = requestPeers(rasterMeta.layer, rasterMeta.tileMatrixSet)
 
@@ -93,7 +95,7 @@ class TrackerRasterSource(
                             tileMatrix,
                             tile.col,
                             tile.row,
-                            RasterFormat.fromMime(tile.format)!!
+                            TileFormat.fromMime(tile.format)!!
                         )
                         val result = requestTile(socket, InetAddress.getByName(peerAddr.host), peerAddr.port, tileMeta)
                         if (result.isSuccess) {
@@ -128,5 +130,6 @@ class TrackerRasterSource(
                 tileMatrixSetInfo.getOrThrow().tileMatrixSet!!
             )
         }
+        */
     }
 }

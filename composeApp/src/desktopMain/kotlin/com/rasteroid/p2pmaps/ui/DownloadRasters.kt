@@ -8,20 +8,39 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.rasteroid.p2pmaps.tile.LayerTMS
 import com.rasteroid.p2pmaps.vm.DownloadRastersViewModel
+
+data class ProgressLayerTMS(
+    val layerTMS: LayerTMS,
+    val current: Int,
+    val total: Int
+)
 
 @Composable
 fun InternalRastersScreen(
     viewModel: DownloadRastersViewModel
 ) {
-    if (viewModel.rasters.isEmpty()) {
+    if (viewModel.rasters.collectAsState().value.isEmpty()) {
         NoInternalRastersFound()
     } else {
-        
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            viewModel.rasters.collectAsState().value.forEach { layer ->
+                Text(
+                    text = "${layer.layerTMS.layer} ${layer.layerTMS.tileMatrixSet} ${layer.current}/${layer.total}",
+                    color = if (layer.current == layer.total) Color.Green else Color.Red
+                )
+            }
+        }
     }
 }
 

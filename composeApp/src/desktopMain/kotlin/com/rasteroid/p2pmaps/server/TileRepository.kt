@@ -3,183 +3,37 @@ package com.rasteroid.p2pmaps.server
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
 import com.rasteroid.p2pmaps.server.dto.TrackerAnnounce
-import com.rasteroid.p2pmaps.server.dto.TrackerLayer
-import com.rasteroid.p2pmaps.server.dto.TrackerTile
-import com.rasteroid.p2pmaps.tile.RasterFormat
-import com.rasteroid.p2pmaps.tile.RasterReply
-import com.rasteroid.p2pmaps.tile.TileMatrixSet
-import com.rasteroid.p2pmaps.tile.TileMeta
-import nl.adaptivity.xmlutil.serialization.XML
+import com.rasteroid.p2pmaps.tile.*
 import java.nio.file.Path
-import kotlin.io.path.forEachDirectoryEntry
-import kotlin.io.path.listDirectoryEntries
 
 class TileRepository(
     dataDirectoryPath: Path
 ) {
     private val layersDirectoryPath = dataDirectoryPath.resolve("layers")
+    private val tmsDirectoryPath = dataDirectoryPath.resolve("tms")
 
     init {
         ensureDirectoryExists(layersDirectoryPath)
+        ensureDirectoryExists(tmsDirectoryPath)
     }
 
-    fun getAnnounce(): TrackerAnnounce {
-        val layers = mutableListOf<TrackerLayer>()
-        layersDirectoryPath.toFile().listFiles()?.filter { it.isDirectory }?.forEach { layerDir ->
-            val layerName = layerDir.name
-            val layerMatrix = mutableMapOf<String, MutableList<TrackerTile>>()
-            // Under each layer dir, we expect subdirectories for tile_matrix_set_name
-            layerDir.listFiles()?.filter { it.isDirectory }?.forEach { tileMatrixSetDir ->
-                val tileMatrixSetName = tileMatrixSetDir.name
-                // Then each subdirectory is tile_matrix
-                tileMatrixSetDir.listFiles()?.filter { it.isDirectory }?.forEach { tileMatrixDir ->
-                    val tileMatrixName = tileMatrixDir.name  // e.g. "0"
-
-                    // Then inside that, each subdirectory is tile_col
-                    tileMatrixDir.listFiles()?.filter { it.isDirectory }?.forEach { tileColDir ->
-                        val col = tileColDir.name.toInt()
-
-                        // Inside tile_col, each file is tile_row.format
-                        tileColDir.listFiles()?.filter { it.isFile }?.forEach { tileFile ->
-                            val fileName = tileFile.name  // e.g. "123.png"
-                            val dotIndex = fileName.lastIndexOf('.')
-                            if (dotIndex != -1) {
-                                val rowString = fileName.substring(0, dotIndex)
-                                val row = rowString.toInt()
-                                val fileFormat = fileName.substring(dotIndex + 1)
-
-                                val tile = TrackerTile(
-                                    col,
-                                    row,
-                                    fileFormat
-                                )
-
-                                // Ensure we have a list in the map for this tileMatrix
-                                layerMatrix.computeIfAbsent(tileMatrixName) {
-                                    mutableListOf()
-                                }.add(tile)
-                            }
-                        }
-                    }
-                }
-
-                // Add this layer’s data to our layers list
-                layers.add(TrackerLayer(
-                    layerName,
-                    tileMatrixSetName,
-                    layerMatrix
-                ))
-            }
-        }
-
-        return TrackerAnnounce(
-            uuid = Settings.PEER_ID,
-            layers = layers
-        )
-    }
-
-    fun getLayerInfo(layer: String): RasterReply? {
-        val layerInfoPath = layersDirectoryPath.resolve(layer).resolve("info.xml")
-        return if (layerInfoPath.toFile().exists()) {
-            val layerInfo = layerInfoPath.toFile().readText()
-            XML.decodeFromString(layerInfo)
+    /*
+    Tile requests.
+    */
+    fun getTileSize(
+        layer: String,
+        tileMatrixSet: String,
+        tileMatrix: String,
+        tileCol: Int,
+        tileRow: Int,
+        format: TileFormat
+    ): Int? {
+        val tilePath = resolveTilePath(layer, tileMatrixSet, tileMatrix, tileCol, tileRow, format)
+        return if (tilePath.toFile().exists()) {
+            tilePath.toFile().length().toInt()
         } else {
             null
         }
-    }
-
-    fun saveLayerInfo(layer: String, info: RasterReply) {
-        val layerPath = layersDirectoryPath.resolve(layer)
-        ensureDirectoryExists(layerPath)
-        val layerInfoPath = layerPath.resolve("info.xml")
-        layerInfoPath.toFile().writeText(XML.encodeToString(info))
-    }
-
-    fun saveTileMatrixSetInfo(
-        layer: String,
-        tileMatrixSetInfo: String,
-        info: TileMatrixSet
-    ) {
-        val tileMatrixSetPath = layersDirectoryPath.resolve(layer).resolve(tileMatrixSetInfo)
-        ensureDirectoryExists(tileMatrixSetPath)
-        val tileMatrixSetInfoPath = tileMatrixSetPath.resolve("info.xml")
-        tileMatrixSetInfoPath.toFile().writeText(XML.encodeToString(info))
-    }
-
-    fun saveTile(meta: TileMeta, tile: ByteArray) {
-        val tilePath = resolveTilePath(
-            meta.rasterMeta.layer,
-            meta.rasterMeta.tileMatrixSet,
-            meta.tileMatrix,
-            meta.tileCol,
-            meta.tileRow,
-            meta.format
-        )
-        ensureDirectoryExists(tilePath)
-        tilePath.toFile().writeBytes(tile)
-    }
-
-    fun getRasters(): List<RasterReply> {
-        val layerPaths = layersDirectoryPath.listDirectoryEntries()
-        val rasters = mutableListOf<RasterReply>()
-        for (layer in layerPaths) {
-            val layerInfoPath = layer.resolve("info.xml")
-            if (layerInfoPath.toFile().exists()) {
-                val layerInfo = layerInfoPath.toFile().readText()
-                // Serialize XML text into RasterReply.
-                rasters.add(XML.decodeFromString(layerInfo))
-            }
-        }
-        return rasters
-    }
-
-    fun getTileMatrixSetInfo(
-        layer: String,
-        tileMatrixSet: String
-    ): TileMatrixSet? {
-        val tileMatrixSetPath = layersDirectoryPath
-            .resolve(layer)
-            .resolve(tileMatrixSet)
-            .resolve("info.xml")
-        return if (tileMatrixSetPath.toFile().exists()) {
-            val tileMatrixSetInfo = tileMatrixSetPath.toFile().readText()
-            XML.decodeFromString(tileMatrixSetInfo)
-        } else {
-            null
-        }
-    }
-
-    fun getContents(): String {
-        // Basically manually building the Contents tag of the WMTS capabilities.
-        val contents = StringBuilder("<Contents>\n")
-        val layerPaths = layersDirectoryPath.listDirectoryEntries()
-        for (layer in layerPaths) {
-            val layerInfoPath = layer.resolve("info.xml")
-            if (layerInfoPath.toFile().exists()) {
-                val layerInfo = layerInfoPath.toFile().readText()
-                contents.append("<Layer>\n")
-                contents.append(layerInfo)
-                contents.append("</Layer>\n")
-            }
-        }
-
-        for (layer in layerPaths) {
-            layer.forEachDirectoryEntry { tileMatrixSetPath ->
-                val tileMatrixSetInfoPath = layer
-                    .resolve(tileMatrixSetPath)
-                    .resolve("info.xml")
-                if (tileMatrixSetInfoPath.toFile().exists()) {
-                    val tileMatrixSetInfo = tileMatrixSetInfoPath.toFile().readText()
-                    contents.append("<TileMatrixSet>\n")
-                    contents.append(tileMatrixSetInfo)
-                    contents.append("</TileMatrixSet>\n")
-                }
-            }
-        }
-
-        contents.append("</Contents>\n")
-
-        return contents.toString()
     }
 
     fun getTile(
@@ -188,7 +42,7 @@ class TileRepository(
         tileMatrix: String,
         tileCol: Int,
         tileRow: Int,
-        format: RasterFormat,
+        format: TileFormat,
         offsetBytes: Int = 0,
         limitBytes: Int = Int.MAX_VALUE
     ): ByteArray? {
@@ -204,20 +58,147 @@ class TileRepository(
         }
     }
 
-    fun getTileSize(
-        layer: String,
-        tileMatrixSet: String,
-        tileMatrix: String,
-        tileCol: Int,
-        tileRow: Int,
-        format: RasterFormat
-    ): Int? {
-        val tilePath = resolveTilePath(layer, tileMatrixSet, tileMatrix, tileCol, tileRow, format)
-        return if (tilePath.toFile().exists()) {
-            tilePath.toFile().length().toInt()
+    fun saveTile(meta: TileMeta, tile: ByteArray) {
+        val tilePath = resolveTilePath(
+            meta.layer,
+            meta.tileMatrixSet,
+            meta.tileMatrix,
+            meta.tileCol,
+            meta.tileRow,
+            meta.format
+        )
+        ensureDirectoryExists(tilePath)
+        tilePath.toFile().writeBytes(tile)
+    }
+
+    /*
+    Layer requests.
+    */
+    // Construct available unique pairs of layer + TMS.
+    fun getLayerTMSs(): List<LayerTMS> {
+        // Layers - names of directories in layers directory.
+        // TMS - name of a subdirectory inside each layer directory.
+        // We need to construct a list of all available pairs of layer + TMS.
+        val layers = layersDirectoryPath.toFile().listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?: emptyList()
+
+        val tms = layers.map { layer ->
+            val tmsDir = layersDirectoryPath.resolve(layer).toFile().listFiles()
+                ?.filter { it.isDirectory }
+                ?.map { it.name }
+                ?: emptyList()
+            tmsDir.map { tms -> LayerTMS(layer, tms) }
+        }.flatten()
+
+        return tms
+    }
+
+    // Get fixed layer info in string format.
+    fun getRawLayerInfo(layer: String): String? {
+        // Essentially, read info.xml inside the layer directory.
+        val layerPath = layersDirectoryPath.resolve(layer)
+        val infoPath = layerPath.resolve("info.xml")
+        return if (infoPath.toFile().exists()) {
+            infoPath.toFile().readText()
         } else {
             null
         }
+    }
+
+    // Get fixed layer info in LayerMeta format.
+    fun getLayerInfo(layer: String): LayerMeta? {
+        val raw = getRawLayerInfo(layer)
+        return if (raw != null) {
+            LayerMeta.fromXML(raw)
+        } else {
+            null
+        }
+    }
+
+    // Helper function to construct layer meta with TMS links.
+    fun getLayerTMSLink(layer: String): String? {
+        // Essentially get fixed info and append TMS links to it.
+        // TMS links are subdirectories names inside the layer directory.
+        var raw = getRawLayerInfo(layer) ?: return null
+        val tmsDir = layersDirectoryPath.resolve(layer).toFile().listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?: emptyList()
+
+        // Append TMS links to the raw info.
+        tmsDir.forEach { tms ->
+            raw += "<TileMatrixSetLink>\n"
+            raw += "<TileMatrixSet>$tms</TileMatrixSet>\n"
+            raw += "</TileMatrixSetLink>\n"
+        }
+
+        return raw
+    }
+
+    // Get the download progress (current, total) for a layer.
+    fun getLayerProgress(layer: String, tms: String): Pair<Int, Int>? {
+        // This is a bit unoptimized, but fine for now.
+        // Essentially, compute total tiles from TMS and
+        // find current tiles from the layer directory.
+        val tmsMeta = getTMSMeta(tms) ?: return null
+        val totalTiles = tmsMeta.tileMatrixes.sumOf { tileMatrix ->
+            tileMatrix.matrixWidth * tileMatrix.matrixHeight
+        }
+
+        // Simply count current tiles by looking at how many
+        // files with extension as in TileFormat are in the layer directory.
+        val layerPath = layersDirectoryPath.resolve(layer).resolve(tms)
+        val currentTiles = layerPath.toFile().listFiles()
+            // TODO: For now hardcoding png.
+            ?.filter { it.isFile && it.extension == TileFormat.PNG.getExtension() }
+            ?.size
+            ?: 0
+
+        return Pair(currentTiles, totalTiles)
+    }
+
+    /*
+    Tile Matrix Set requests.
+    */
+    // Get fixed Tile Matrix Set meta.
+    fun getTMSMeta(tms: String): TMSMeta? {
+        // Essentially, read <tms>.xml inside the tms directory.
+        val tmsPath = tmsDirectoryPath.resolve("$tms.xml")
+        return if (tmsPath.toFile().exists()) {
+            val raw = tmsPath.toFile().readText()
+            TMSMeta.fromXML(raw)
+        } else {
+            null
+        }
+    }
+
+    // Save fixed tile matrix set meta.
+    fun saveTMSMeta(tms: String, tmsMeta: TMSMeta) {
+        val tmsPath = tmsDirectoryPath.resolve("$tms.xml")
+        if (tmsPath.toFile().exists()) {
+            // We don't need to edit any meta if it already exists.
+            return
+        }
+        ensureDirectoryExists(tmsPath)
+        tmsPath.toFile().writeText(tmsMeta.toXML())
+    }
+
+    fun getAnnounce(): TrackerAnnounce {
+        // TODO.
+        return TrackerAnnounce(
+            uuid = "test",
+            layers = listOf()
+        )
+    }
+
+    fun getContents(): String {
+        // Basically manually building the Contents tag of the WMTS capabilities.
+        val contents = StringBuilder("<Contents>\n")
+
+        contents.append("</Contents>\n")
+        return contents.toString()
     }
 
     private fun resolveTilePath(
@@ -226,7 +207,7 @@ class TileRepository(
         tileMatrix: String,
         tileCol: Int,
         tileRow: Int,
-        format: RasterFormat
+        format: TileFormat
     ): Path =
         // We're basically following OpenStreetMap's Z-X-Y layout.
         layersDirectoryPath

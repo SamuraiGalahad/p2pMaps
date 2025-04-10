@@ -12,13 +12,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.rasteroid.p2pmaps.tile.RasterMeta
+import com.rasteroid.p2pmaps.tile.LayerTMS
 import com.rasteroid.p2pmaps.tile.source.type.RasterSource
 import com.rasteroid.p2pmaps.vm.BrowseRastersViewModel
 
-data class SourcedRasterMeta(
+data class SourcedLayerTMS(
     val source: RasterSource,
-    val meta: RasterMeta
+    val layerTMS: LayerTMS
 )
 
 @Composable
@@ -43,14 +43,14 @@ fun RasterGridScreen(viewModel: BrowseRastersViewModel) {
 @Composable
 fun RasterGrid(
     sources: List<RasterSource>,
-    onDownloadClick: (SourcedRasterMeta) -> Unit
+    onDownloadClick: (SourcedLayerTMS) -> Unit
 ) {
     // Combine sources and their metas into a list of SourcedRasterMeta.
-    val sourcedRasterMetas = mutableListOf<SourcedRasterMeta>()
+    val sourcedLayerTMSs = mutableListOf<SourcedLayerTMS>()
     sources.forEach { source ->
         val allMetas = source.rasters.collectAsState()
         allMetas.value.forEach { meta ->
-            sourcedRasterMetas.add(SourcedRasterMeta(source, meta))
+            sourcedLayerTMSs.add(SourcedLayerTMS(source, meta))
         }
     }
 
@@ -60,7 +60,7 @@ fun RasterGrid(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(8.dp)
     ) {
-        items(sourcedRasterMetas) { sourcedRasterMeta ->
+        items(sourcedLayerTMSs) { sourcedRasterMeta ->
             RasterCard(sourcedRasterMeta, onDownloadClick)
         }
     }
@@ -68,8 +68,8 @@ fun RasterGrid(
 
 @Composable
 fun RasterCard(
-    sourcedRasterMeta: SourcedRasterMeta,
-    onDownloadClick: (SourcedRasterMeta) -> Unit
+    sourcedLayerTMS: SourcedLayerTMS,
+    onDownloadClick: (SourcedLayerTMS) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -79,14 +79,14 @@ fun RasterCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(text = "Layer: ${sourcedRasterMeta.meta.layer}")
-            Text(text = "TileMatrixSet: ${sourcedRasterMeta.meta.tileMatrixSet}")
-            Text(text = "Source: ${sourcedRasterMeta.source.name}")
+            Text(text = "Layer: ${sourcedLayerTMS.layerTMS.layer}")
+            Text(text = "TileMatrixSet: ${sourcedLayerTMS.layerTMS.tileMatrixSet}")
+            Text(text = "Source: ${sourcedLayerTMS.source.name}")
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = { onDownloadClick(sourcedRasterMeta) }
+                onClick = { onDownloadClick(sourcedLayerTMS) }
             ) {
                 Text("Download")
             }

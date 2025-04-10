@@ -9,11 +9,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Message {
     @Serializable
-    @SerialName("message.rasters")
-    // Request a list of available rasters (layer + tile matrix set).
-    data object Rasters : Message()
-
-    @Serializable
     @SerialName("message.ping")
     // Keep-alive message between peers.
     data object Ping : Message()
@@ -23,30 +18,46 @@ sealed class Message {
     // Reply to keep-alive message.
     data object Pong : Message()
 
-    // Request a specific tile.
     @Serializable
-    @SerialName("message.tile")
-    data class Tile(val meta: TileMeta, val offsetBytes: Int, val limitBytes: Int) : Message()
+    @SerialName("message.layers")
+    // Request a list of available rasters (layer id + tile matrix set id).
+    data object Layers : Message()
+
+    @Serializable
+    @SerialName("message.layersReply")
+    data class LayersReply(val layers: List<LayerTMS>) : Message()
+
+    @Serializable
+    @SerialName("message.layer")
+    // Request a fixed description for a layer.
+    data class Layer(val layer: String) : Message()
+
+    @Serializable
+    @SerialName("message.layerReply")
+    data class LayerReply(val raster: LayerMeta?) : Message()
+
+    @Serializable
+    @SerialName("message.tileMatrixSet")
+    // Request a description for a tile matrix set.
+    data class TileMatrixSet(val tileMatrixSet: String) : Message()
+
+    @Serializable
+    @SerialName("message.tileMatrixSetReply")
+    data class TileMatrixSetReply(val tileMatrixSet: TMSMeta?) : Message()
 
     // Request tile size in bytes.
     @Serializable
     @SerialName("message.tileSize")
     data class TileSize(val meta: TileMeta) : Message()
 
-    // Request a description for a layer (raster):
     @Serializable
-    @SerialName("message.layerInfo")
-    data class LayerInfo(val layer: String) : Message()
+    @SerialName("message.tileSizeReply")
+    data class TileSizeReply(val dataSizeBytes: Int) : Message()
 
-    // Request a description for a raster (layer + tile matrix set):
-    // a list of available tile matrixes.
+    // Request a specific tile.
     @Serializable
-    @SerialName("message.tileMatrixSetInfo")
-    data class TileMatrixSetInfo(val raster: RasterMeta) : Message()
-
-    @Serializable
-    @SerialName("message.rastersReply")
-    data class RastersReply(val rasters: List<RasterReply>) : Message()
+    @SerialName("message.tile")
+    data class Tile(val meta: TileMeta, val offsetBytes: Int, val limitBytes: Int) : Message()
 
     @Serializable
     @SerialName("message.tileReply")
@@ -61,16 +72,4 @@ sealed class Message {
             return tile.contentHashCode()
         }
     }
-
-    @Serializable
-    @SerialName("message.tileSizeReply")
-    data class TileSizeReply(val dataSizeBytes: Int) : Message()
-
-    @Serializable
-    @SerialName("message.layerInfoReply")
-    data class LayerInfoReply(val raster: RasterReply?) : Message()
-
-    @Serializable
-    @SerialName("message.tileMatrixSetInfoReply")
-    data class TileMatrixSetInfoReply(val tileMatrixSet: TileMatrixSet?) : Message()
 }

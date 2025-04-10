@@ -1,9 +1,6 @@
 package com.rasteroid.p2pmaps.tile
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import nl.adaptivity.xmlutil.serialization.XmlSerialName
-import nl.adaptivity.xmlutil.serialization.XmlValue
 
 @Serializable
 data class BoundingBox(
@@ -14,79 +11,152 @@ data class BoundingBox(
 )
 
 @Serializable
-data class RasterMeta(
-    @SerialName("NAME")
+// Layer + TMS pair, used for querying available unique layer + TMS pairs from a peer.
+data class LayerTMS(
     val layer: String,
-    @SerialName("TYPE")
     val tileMatrixSet: String
 )
 
 @Serializable
+// Meta used to identify a specific tile.
 data class TileMeta(
-    val rasterMeta: RasterMeta,
+    val layer: String,
+    val tileMatrixSet: String,
     val tileMatrix: String,
-    val tileCol: Int,
     val tileRow: Int,
-    val format: RasterFormat
+    val tileCol: Int,
+    val format: TileFormat
 )
 
-// The reply for Message.Rasters call.
-// Additionally, XML-encoded meta for each layer in info.xml.
 @Serializable
-data class RasterReply(
-    @XmlSerialName("ows:Title")
+// Fixed Layer meta, stored in files used to identify the layer.
+data class LayerMeta(
     val title: String,
-    @XmlSerialName("ows:WGS84BoundingBox")
     val boundingBox: BoundingBox,
-    @XmlSerialName("ows:Identifier")
     val identifier: String,
-    @XmlSerialName("Style")
-    val styles: List<LayerStyle>,
-    @XmlSerialName("Format")
-    val formats: List<RasterFormat>,
-    @XmlSerialName("TileMatrixSetLink")
-    val tileMatrixSetLinks: List<TileMatrixSetLink>
-)
+    val styles: List<String>,
+    val formats: List<TileFormat>
+) {
+    // We define custom serializers/deserializers since the XML's we store
+    // are not valid, since they are not full (namespaces are absent).
+    fun toXML(): String {
+        val firstPart = """
+            <Layer>
+                <ows:Title>$title</ows:Title>
+                <ows:WGS84BoundingBox>
+                    <ows:LowerCorner>${boundingBox.minX} ${boundingBox.minY}</ows:LowerCorner>
+                    <ows:UpperCorner>${boundingBox.maxX} ${boundingBox.maxY}</ows:UpperCorner>
+                </ows:WGS84BoundingBox>
+                <ows:Identifier>$identifier</ows:Identifier>
+        """
+        val stylesPart = if (styles.isNotEmpty())
+            styles.joinToString("") { "<Style isDefault=\"true\">$it</Style>" }
+        else
+            "<Style isDefault=\"true\">_null</Style>"
+
+        val formatsPart = formats.joinToString("") { "<Format>$it</Format>" }
+
+        return "$firstPart$stylesPart$formatsPart".trimIndent()
+    }
+
+    companion object {
+        fun fromXML(xml: String): LayerMeta {
+            val title = xml.substringAfter("<ows:Title>").substringBefore("</ows:Title>")
+            val minX = xml.substringAfter("<ows:LowerCorner>").substringBefore(" ").toDouble()
+            val minY = xml.substringAfter("<ows:LowerCorner> ").substringBefore("</ows:LowerCorner>").toDouble()
+            val maxX = xml.substringAfter("<ows:UpperCorner>").substringBefore(" ").toDouble()
+            val maxY = xml.substringAfter("<ows:UpperCorner> ").substringBefore("</ows:UpperCorner>").toDouble()
+            val identifier = xml.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
+            val styles = xml.substringAfter("<Style isDefault=\"true\">").substringBefore("</Style>")
+                .split("</Style><Style isDefault=\"true\">")
+                .map { it.replace("</Style>", "").replace("<Style isDefault=\"true\">", "") }
+                .filter { it != "_null" }
+            val formats = xml.substringAfter("<Format>").substringBefore("</Format>")
+                .split("</Format><Format>")
+                .map { it.replace("</Format>", "").replace("<Format>", "") }
+                .map { TileFormat.fromMime(it)!! }
+
+            return LayerMeta(title, BoundingBox(minX, minY, maxX, maxY), identifier, styles, formats)
+        }
+    }
+}
+
 
 @Serializable
-data class TileMatrixSetLink(
-    @XmlSerialName("TileMatrixSet")
-    val tileMatrixSet: String
-)
-
-@Serializable
-data class LayerStyle(
-    @XmlSerialName("isDefault")
-    @XmlValue(false) // Making this an attribute rather than a tag.
-    val isDefault: Boolean = true,
-    @XmlSerialName("ows:Identifier")
-    val identifier: String = "_null"
-)
-
-@Serializable
-data class TileMatrixSet(
-    @XmlSerialName("ows:Identifier")
+data class TMSMeta(
     val identifier: String,
-    @XmlSerialName("ows:SupportedCRS")
     val supportedCRS: String,
-    @XmlSerialName("TileMatrix")
-    val tileMatrix: List<TileMatrix>
-)
+    val tileMatrixes: List<TileMatrixMeta>,
+) {
+    fun toXML(): String {
+        val tileMatrixesPart = tileMatrixes.joinToString("") { it.toXML() }
+        return """
+            <TileMatrixSet>
+                <ows:Identifier>$identifier</ows:Identifier>
+                <ows:SupportedCRS>$supportedCRS</ows:SupportedCRS>
+                $tileMatrixesPart
+            </TileMatrixSet>
+        """.trimIndent()
+    }
+
+    companion object {
+        fun fromXML(xml: String): TMSMeta {
+            val identifier = xml.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
+            val supportedCRS = xml.substringAfter("<ows:SupportedCRS>").substringBefore("</ows:SupportedCRS>")
+            val tileMatrixes = xml.split("<TileMatrix>")
+                .drop(1)
+                .map { TileMatrixMeta.fromXML(it) }
+
+            return TMSMeta(identifier, supportedCRS, tileMatrixes)
+        }
+    }
+}
 
 @Serializable
-data class TileMatrix(
-    @XmlSerialName("ows:Identifier")
+data class TileMatrixMeta(
     val identifier: String,
-    @XmlSerialName("ScaleDenominator")
     val scaleDenominator: Double,
-    @XmlSerialName("TopLeftCorner")
     val topLeftCorner: Pair<Double, Double>,
-    @XmlSerialName("TileWidth")
     val tileWidth: Int,
-    @XmlSerialName("TileHeight")
     val tileHeight: Int,
-    @XmlSerialName("MatrixWidth")
     val matrixWidth: Int,
-    @XmlSerialName("MatrixHeight")
-    val matrixHeight: Int
-)
+    val matrixHeight: Int,
+) {
+    fun toXML(): String {
+        return """
+            <TileMatrix>
+                <ows:Identifier>$identifier</ows:Identifier>
+                <ScaleDenominator>$scaleDenominator</ScaleDenominator>
+                <TopLeftCorner>${topLeftCorner.first} ${topLeftCorner.second}</TopLeftCorner>
+                <TileWidth>$tileWidth</TileWidth>
+                <TileHeight>$tileHeight</TileHeight>
+                <MatrixWidth>$matrixWidth</MatrixWidth>
+                <MatrixHeight>$matrixHeight</MatrixHeight>
+            </TileMatrix>
+        """.trimIndent()
+    }
+
+    companion object {
+        fun fromXML(xml: String): TileMatrixMeta {
+            val identifier = xml.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
+            val scaleDenominator = xml.substringAfter("<ScaleDenominator>").substringBefore("</ScaleDenominator>").toDouble()
+            val topLeftCorner = xml.substringAfter("<TopLeftCorner>").substringBefore("</TopLeftCorner>")
+                .split(" ")
+                .map { it.toDouble() }
+            val tileWidth = xml.substringAfter("<TileWidth>").substringBefore("</TileWidth>").toInt()
+            val tileHeight = xml.substringAfter("<TileHeight>").substringBefore("</TileHeight>").toInt()
+            val matrixWidth = xml.substringAfter("<MatrixWidth>").substringBefore("</MatrixWidth>").toInt()
+            val matrixHeight = xml.substringAfter("<MatrixHeight>").substringBefore("</MatrixHeight>").toInt()
+
+            return TileMatrixMeta(
+                identifier,
+                scaleDenominator,
+                Pair(topLeftCorner[0], topLeftCorner[1]),
+                tileWidth,
+                tileHeight,
+                matrixWidth,
+                matrixHeight
+            )
+        }
+    }
+}

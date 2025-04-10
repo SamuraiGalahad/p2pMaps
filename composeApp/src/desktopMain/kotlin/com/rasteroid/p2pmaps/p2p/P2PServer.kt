@@ -48,11 +48,11 @@ fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
     peerInfo(packet, "Received ${message.javaClass.simpleName}")
     when (message) {
         is Message.Ping -> handlePing(socket, packet)
-        is Message.Rasters -> handleRasters(socket, packet)
-        is Message.Tile -> handleTile(socket, packet, message)
+        is Message.Layers -> handleLayers(socket, packet)
+        is Message.Layer -> handleLayer(socket, packet, message)
+        is Message.TileMatrixSet -> handleTileMatrixSet(socket, packet, message)
         is Message.TileSize -> handleTileSize(socket, packet, message)
-        is Message.LayerInfo -> handleLayerInfo(socket, packet, message)
-        is Message.TileMatrixSetInfo -> handleTileMatrixSetInfo(socket, packet, message)
+        is Message.Tile -> handleTile(socket, packet, message)
         else -> unexpected(packet, message)
     }
 }
@@ -62,12 +62,12 @@ private fun handlePing(
     packet: DatagramPacket
 ) = send(socket, packet.address, packet.port, Message.Pong)
 
-private fun handleRasters(
+private fun handleLayers(
     socket: DatagramSocket,
     packet: DatagramPacket,
 ) {
-    val rasters = TileRepository.instance.getRasters()
-    send(socket, packet.address, packet.port, Message.RastersReply(rasters))
+    val rasters = TileRepository.instance.getLayerTMSs()
+    send(socket, packet.address, packet.port, Message.LayersReply(rasters))
 }
 
 private fun handleTile(
@@ -76,8 +76,8 @@ private fun handleTile(
     message: Message.Tile
 ) {
     val tile = TileRepository.instance.getTile(
-        message.meta.rasterMeta.layer,
-        message.meta.rasterMeta.tileMatrixSet,
+        message.meta.layer,
+        message.meta.tileMatrixSet,
         message.meta.tileMatrix,
         message.meta.tileCol,
         message.meta.tileRow,
@@ -93,8 +93,8 @@ private fun handleTileSize(
     message: Message.TileSize
 ) {
     val tileSize = TileRepository.instance.getTileSize(
-        message.meta.rasterMeta.layer,
-        message.meta.rasterMeta.tileMatrixSet,
+        message.meta.layer,
+        message.meta.tileMatrixSet,
         message.meta.tileMatrix,
         message.meta.tileCol,
         message.meta.tileRow,
@@ -103,25 +103,24 @@ private fun handleTileSize(
     send(socket, packet.address, packet.port, Message.TileSizeReply(tileSize))
 }
 
-private fun handleLayerInfo(
+private fun handleLayer(
     socket: DatagramSocket,
     packet: DatagramPacket,
-    message: Message.LayerInfo
+    message: Message.Layer
 ) {
     val layerInfo = TileRepository.instance.getLayerInfo(message.layer)
-    send(socket, packet.address, packet.port, Message.LayerInfoReply(layerInfo))
+    send(socket, packet.address, packet.port, Message.LayerReply(layerInfo))
 }
 
-private fun handleTileMatrixSetInfo(
+private fun handleTileMatrixSet(
     socket: DatagramSocket,
     packet: DatagramPacket,
-    message: Message.TileMatrixSetInfo
+    message: Message.TileMatrixSet
 ) {
-    val tileMatrixSetInfo = TileRepository.instance.getTileMatrixSetInfo(
-        message.raster.layer,
-        message.raster.tileMatrixSet
+    val tileMatrixSet = TileRepository.instance.getTMSMeta(
+        message.tileMatrixSet
     )
-    send(socket, packet.address, packet.port, Message.TileMatrixSetInfoReply(tileMatrixSetInfo))
+    send(socket, packet.address, packet.port, Message.TileMatrixSetReply(tileMatrixSet))
 }
 
 private fun unexpected(

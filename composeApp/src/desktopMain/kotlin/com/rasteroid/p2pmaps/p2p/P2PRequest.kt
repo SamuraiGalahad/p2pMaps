@@ -1,7 +1,6 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.tile.RasterMeta
 import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
@@ -43,11 +42,47 @@ fun udpHolePunch(
     return Pair(socket, PeerAddr(peerAddressPort[0], peerPort))
 }
 
-fun requestRasters(
+fun requestLayersTMS(
     socket: DatagramSocket,
     address: InetAddress,
     port: Int
-) = sendAndWaitForReply<Message.RastersReply>(socket, address, port, Message.Rasters)
+) = sendAndWaitForReply<Message.LayersReply>(socket, address, port, Message.Layers)
+
+fun requestLayer(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int,
+    layer: String
+) = sendAndWaitForReply<Message.LayerReply>(
+    socket,
+    address,
+    port,
+    Message.Layer(layer)
+)
+
+fun requestTileMatrixSet(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int,
+    tileMatrixSet: String
+) = sendAndWaitForReply<Message.TileMatrixSetReply>(
+    socket,
+    address,
+    port,
+    Message.TileMatrixSet(tileMatrixSet)
+)
+
+private fun requestTileSize(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int,
+    meta: TileMeta
+) = sendAndWaitForReply<Message.TileSizeReply>(
+    socket,
+    address,
+    port,
+    Message.TileSize(meta)
+)
 
 fun requestTile(
     socket: DatagramSocket,
@@ -80,42 +115,6 @@ fun requestTile(
 
     return Result.success(tile)
 }
-
-private fun requestTileSize(
-    socket: DatagramSocket,
-    address: InetAddress,
-    port: Int,
-    meta: TileMeta
-) = sendAndWaitForReply<Message.TileSizeReply>(
-    socket,
-    address,
-    port,
-    Message.TileSize(meta)
-)
-
-fun requestLayerInfo(
-    socket: DatagramSocket,
-    address: InetAddress,
-    port: Int,
-    layer: String
-) = sendAndWaitForReply<Message.LayerInfoReply>(
-    socket,
-    address,
-    port,
-    Message.LayerInfo(layer)
-)
-
-fun requestTileMatrixSetInfo(
-    socket: DatagramSocket,
-    address: InetAddress,
-    port: Int,
-    rasterMeta: RasterMeta
-) = sendAndWaitForReply<Message.TileMatrixSetInfoReply>(
-    socket,
-    address,
-    port,
-    Message.TileMatrixSetInfo(rasterMeta)
-)
 
 private inline fun <reified ReplyType : Message> sendAndWaitForReply(
     socket: DatagramSocket,
