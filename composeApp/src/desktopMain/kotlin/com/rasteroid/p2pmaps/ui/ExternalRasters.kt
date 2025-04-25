@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.rasteroid.p2pmaps.tile.LayerTMS
 import com.rasteroid.p2pmaps.tile.source.type.RasterSource
-import com.rasteroid.p2pmaps.vm.BrowseRastersViewModel
+import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
 
 data class SourcedLayerTMS(
     val source: RasterSource,
@@ -23,13 +23,13 @@ data class SourcedLayerTMS(
 
 @Composable
 fun BrowseRastersScreen(
-    viewModel: BrowseRastersViewModel
+    viewModel: ExternalRastersViewModel
 ) {
     RasterGridScreen(viewModel)
 }
 
 @Composable
-fun RasterGridScreen(viewModel: BrowseRastersViewModel) {
+fun RasterGridScreen(viewModel: ExternalRastersViewModel) {
     // Collect the list of sources
     val allSources by viewModel.sources.collectAsState()
 

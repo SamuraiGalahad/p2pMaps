@@ -11,6 +11,6 @@ data class AppConfig(
     var localWMTSServerPort: Int = 35267,
     var trackerUrl: String = "",
     var trackerPeerDiscoveryUrl: String = "",
-    var trackerPeerDiscoveryPort: Int = 5678,
+    var trackerPeerDiscoveryPort: Int = 0,
     var peerId: String = ""
 )

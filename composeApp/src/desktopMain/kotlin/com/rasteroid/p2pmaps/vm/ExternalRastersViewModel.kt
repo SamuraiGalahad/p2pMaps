@@ -9,7 +9,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class BrowseRastersViewModel : ViewModel() {
+class ExternalRastersViewModel : ViewModel() {
     val sources: StateFlow<List<RasterSource>> = ExternalRasterRepository.instance.sources
 
     @OptIn(DelicateCoroutinesApi::class)

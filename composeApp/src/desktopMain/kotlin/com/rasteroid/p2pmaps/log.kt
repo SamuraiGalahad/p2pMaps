@@ -15,11 +15,17 @@ data class Log(
     val throwable: Throwable?
 )
 
-class LastNLogs(private val logsCount: Int) : LogWriter() {
+class LastNLogs(
+    private val logsCount: Int,
+    private val minimumSeverity: Severity = Severity.Info,
+) : LogWriter() {
     private val _logs = mutableStateListOf<Log>()
     val logs: SnapshotStateList<Log> get() = _logs
 
     override fun log(severity: Severity, message: String, tag: String, throwable: Throwable?) {
+        if (severity < minimumSeverity) {
+            return
+        }
         _logs.add(Log(LocalDateTime.now(), severity, tag, message, throwable))
         if (logs.size > logsCount) {
             _logs.removeAt(0)

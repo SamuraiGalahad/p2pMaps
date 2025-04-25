@@ -1,20 +1,33 @@
 package com.rasteroid.p2pmaps.server
 
+import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
 import com.rasteroid.p2pmaps.server.dto.TrackerAnnounce
 import com.rasteroid.p2pmaps.tile.*
 import java.nio.file.Path
 
+private val log = Logger.withTag("tile repo")
+
+data class ProgressLayerTMS(
+    val layerTMS: LayerTMS,
+    val current: Int,
+    val total: Int
+)
+
 class TileRepository(
     dataDirectoryPath: Path
 ) {
     private val layersDirectoryPath = dataDirectoryPath.resolve("layers")
     private val tmsDirectoryPath = dataDirectoryPath.resolve("tms")
+    val layers: List<LayerTMS> = getLayerTMSs()
 
     init {
         ensureDirectoryExists(layersDirectoryPath)
         ensureDirectoryExists(tmsDirectoryPath)
+
+        // Load all layer + tms combinations.
+        log.i("Initialized ${layers.size} rasters")
     }
 
     /*
@@ -137,26 +150,40 @@ class TileRepository(
         return raw
     }
 
-    // Get the download progress (current, total) for a layer.
-    fun getLayerProgress(layer: String, tms: String): Pair<Int, Int>? {
-        // This is a bit unoptimized, but fine for now.
-        // Essentially, compute total tiles from TMS and
-        // find current tiles from the layer directory.
-        val tmsMeta = getTMSMeta(tms) ?: return null
-        val totalTiles = tmsMeta.tileMatrixes.sumOf { tileMatrix ->
-            tileMatrix.matrixWidth * tileMatrix.matrixHeight
+
+    // Get the actual number of downloaded tiles (current, total) for a layer.
+    fun getLayerTileCount(
+        layer: String,
+        tms: String,
+        format: String
+    ): Int {
+        // Essentially, count the number of files in the layer directory.
+        // Recursively delve into each subdirectory and count the files.
+        val layerPath = layersDirectoryPath.resolve(layer).resolve(tms)
+        val tileMatrixes = layerPath.toFile().listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?: emptyList()
+
+        var totalTiles = 0
+        for (tileMatrix in tileMatrixes) {
+            val tileMatrixPath = layerPath.resolve(tileMatrix)
+            val tileCols = tileMatrixPath.toFile().listFiles()
+                ?.filter { it.isDirectory }
+                ?.map { it.name }
+                ?: emptyList()
+
+            for (tileCol in tileCols) {
+                val tileColPath = tileMatrixPath.resolve(tileCol)
+                val tiles = tileColPath.toFile().listFiles()
+                    ?.filter { it.extension == format }
+                    ?.size
+                    ?: 0
+                totalTiles += tiles
+            }
         }
 
-        // Simply count current tiles by looking at how many
-        // files with extension as in TileFormat are in the layer directory.
-        val layerPath = layersDirectoryPath.resolve(layer).resolve(tms)
-        val currentTiles = layerPath.toFile().listFiles()
-            // TODO: For now hardcoding png.
-            ?.filter { it.isFile && it.extension == TileFormat.PNG.getExtension() }
-            ?.size
-            ?: 0
-
-        return Pair(currentTiles, totalTiles)
+        return totalTiles
     }
 
     /*
@@ -166,6 +193,7 @@ class TileRepository(
     fun getTMSMeta(tms: String): TMSMeta? {
         // Essentially, read <tms>.xml inside the tms directory.
         val tmsPath = tmsDirectoryPath.resolve("$tms.xml")
+        log.d("resolved tms meta path: $tmsPath")
         return if (tmsPath.toFile().exists()) {
             val raw = tmsPath.toFile().readText()
             TMSMeta.fromXML(raw)
