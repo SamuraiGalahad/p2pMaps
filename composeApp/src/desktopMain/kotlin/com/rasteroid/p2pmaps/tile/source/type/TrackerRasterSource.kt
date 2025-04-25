@@ -1,27 +1,17 @@
 package com.rasteroid.p2pmaps.tile.source.type
 
 import co.touchlab.kermit.Logger
-import com.rasteroid.p2pmaps.p2p.*
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.dto.TrackerRequestPeers
 import com.rasteroid.p2pmaps.tile.LayerTMS
-import com.rasteroid.p2pmaps.tile.TileFormat
-import com.rasteroid.p2pmaps.tile.TileMeta
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.net.DatagramSocket
-import java.net.InetAddress
 
-private val log = Logger.withTag("tracker raster source")
 
 class TrackerRasterSource(
     private val remoteUrl: String,
@@ -31,15 +21,25 @@ class TrackerRasterSource(
     "Tracker",
     RasterSourceType.PEER
 ) {
+    private val log = Logger.withTag("tracker $remoteUrl")
     private val client = HttpClient {
         install(ContentNegotiation) {
             json( Json { ignoreUnknownKeys = true })
         }
     }
 
-    override suspend fun refresh() {
-        announce()
-        _rasters.value = requestRasters()
+    override suspend fun getRasters(): Result<List<LayerTMS>> {
+        // Request $remote_url/maps from the server and wrap it in a Result.
+        try {
+            val rasters = client
+                .get("$remoteUrl/maps")
+                .body<List<LayerTMS>>()
+            log.d("Received rasters from tracker: $rasters")
+            return Result.success(rasters)
+        } catch (e: Exception) {
+            log.e("Failed to get rasters from tracker")
+            return Result.failure(e)
+        }
     }
 
     private suspend fun announce() {
@@ -53,13 +53,6 @@ class TrackerRasterSource(
         // Request peers to contact.
         return client
             .get("$remoteUrl/peers/$layer/$tileMatrixSet")
-            .body()
-    }
-
-    private suspend fun requestRasters(): List<LayerTMS> {
-        // Request available layers + tileMatrixSets.
-        return client
-            .get("$remoteUrl/maps")
             .body()
     }
 

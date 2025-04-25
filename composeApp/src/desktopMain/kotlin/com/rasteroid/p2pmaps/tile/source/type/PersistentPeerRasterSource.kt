@@ -25,19 +25,19 @@ class PersistentPeerRasterSource(
     // Open datagram socket on random port.
     private val socket = getSocketOnAnyAvailablePort()
 
-    override suspend fun refresh() {
-        requestLayersTMS(
+    override suspend fun getRasters(): Result<List<LayerTMS>> {
+        val layers = requestLayersTMS(
             socket,
             withContext(Dispatchers.IO) {
                 InetAddress.getByName(host)
             },
             port
-        ).onSuccess { reply ->
-            log.d("Received ${reply.layers.size} rasters from peer")
-            _rasters.value = reply.layers
-        }.onFailure {
-            log.e("Failed to get rasters from peer: $it")
+        ).getOrElse {
+            log.e("Failed to get layers from peer: $it")
+            return Result.failure(it)
         }
+        log.d("Received layers from peer: $layers")
+        return Result.success(layers.layers)
     }
 
     override suspend fun download(

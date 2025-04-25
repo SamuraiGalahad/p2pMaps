@@ -2,15 +2,13 @@ package com.rasteroid.p2pmaps.vm
 
 import androidx.lifecycle.ViewModel
 import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
-import com.rasteroid.p2pmaps.tile.source.type.RasterSource
-import com.rasteroid.p2pmaps.ui.SourcedLayerTMS
+import com.rasteroid.p2pmaps.tile.SourcedLayerTMS
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class ExternalRastersViewModel : ViewModel() {
-    val sources: StateFlow<List<RasterSource>> = ExternalRasterRepository.instance.sources
+    val rasters = ExternalRasterRepository.instance.rasters
 
     @OptIn(DelicateCoroutinesApi::class)
     fun onDownloadSource(sourcedLayerTMS: SourcedLayerTMS) {

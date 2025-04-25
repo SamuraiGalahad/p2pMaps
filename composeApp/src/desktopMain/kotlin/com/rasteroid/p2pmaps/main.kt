@@ -36,14 +36,6 @@ fun main() {
         )
     )
 
-    val rastersRefreshJob = fixedRateTimer(
-        name = "rastersRefresh",
-        initialDelay = 5_000,
-        period = 120_000
-    ) {
-        ExternalRasterRepository.instance.refresh(GlobalScope)
-    }
-
     val server = WMTSServer(
         port = Settings.APP_CONFIG.localWMTSServerPort,
         prefix = "/wmts",
@@ -57,9 +49,9 @@ fun main() {
             onCloseRequest = {
                 log.i("Received application close request")
                 listenJob.cancel()
-                rastersRefreshJob.cancel()
-                exitApplication()
+                ExternalRasterRepository.instance.cancel()
                 server.stop()
+                exitApplication()
             },
             title = Settings.APP_NAME,
         ) {

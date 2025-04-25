@@ -12,14 +12,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.rasteroid.p2pmaps.tile.LayerTMS
-import com.rasteroid.p2pmaps.tile.source.type.RasterSource
+import com.rasteroid.p2pmaps.tile.SourcedLayerTMS
 import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
-
-data class SourcedLayerTMS(
-    val source: RasterSource,
-    val layerTMS: LayerTMS
-)
 
 @Composable
 fun BrowseRastersScreen(
@@ -30,38 +24,17 @@ fun BrowseRastersScreen(
 
 @Composable
 fun RasterGridScreen(viewModel: ExternalRastersViewModel) {
-    // Collect the list of sources
-    val allSources by viewModel.sources.collectAsState()
-
-    // A single grid that displays each RasterSource in its own card
-    RasterGrid(
-        sources = allSources,
-        onDownloadClick = { sourcedRasterMeta -> viewModel.onDownloadSource(sourcedRasterMeta) }
-    )
-}
-
-@Composable
-fun RasterGrid(
-    sources: List<RasterSource>,
-    onDownloadClick: (SourcedLayerTMS) -> Unit
-) {
-    // Combine sources and their metas into a list of SourcedRasterMeta.
-    val sourcedLayerTMSs = mutableListOf<SourcedLayerTMS>()
-    sources.forEach { source ->
-        val allMetas = source.rasters.collectAsState()
-        allMetas.value.forEach { meta ->
-            sourcedLayerTMSs.add(SourcedLayerTMS(source, meta))
-        }
-    }
-
+    val rasters by viewModel.rasters.collectAsState()
     // A simple 2-column grid
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 200.dp),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(8.dp)
     ) {
-        items(sourcedLayerTMSs) { sourcedRasterMeta ->
-            RasterCard(sourcedRasterMeta, onDownloadClick)
+        items(rasters) { sourcedRasterMeta ->
+            RasterCard(sourcedRasterMeta) {
+                viewModel.onDownloadSource(it)
+            }
         }
     }
 }
