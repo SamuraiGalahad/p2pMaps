@@ -9,9 +9,15 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
+private const val SOCKET_TIMEOUT_MILLIS = 15 * 1000
+
 private val log = Logger.withTag("p2p request")
 
-fun getSocketOnAnyAvailablePort(): DatagramSocket = DatagramSocket(0)
+fun getSocketOnAnyAvailablePort(): DatagramSocket {
+    val socket = DatagramSocket(0)
+    socket.soTimeout = SOCKET_TIMEOUT_MILLIS
+    return socket
+}
 
 fun udpHolePunch(
     connectionKey: String,

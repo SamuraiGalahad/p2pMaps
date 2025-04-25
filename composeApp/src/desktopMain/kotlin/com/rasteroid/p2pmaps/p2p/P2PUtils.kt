@@ -1,6 +1,5 @@
 package com.rasteroid.p2pmaps.p2p
 
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -26,8 +25,6 @@ fun receive(
 ): Pair<Int, ByteArray> {
     val buffer = ByteArray(bytes)
     val packet = DatagramPacket(buffer, buffer.size)
-    // Blocking.
-    // TODO: Add timeouts.
     socket.receive(packet)
     return packet.length to buffer
 }
