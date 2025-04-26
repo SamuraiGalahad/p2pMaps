@@ -1,6 +1,7 @@
 package com.rasteroid.p2pmaps.tile.source.type
 
 import com.rasteroid.p2pmaps.tile.LayerTMS
+import kotlinx.coroutines.CoroutineScope
 
 abstract class RasterSource(
     val name: String,
@@ -13,4 +14,6 @@ abstract class RasterSource(
         // Received tiles out of all tiles.
         progressReport: (Int, Int) -> Unit
     )
+
+    open fun startBackground(scope: CoroutineScope) {}
 }

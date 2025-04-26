@@ -9,8 +9,5 @@ data class AppConfig(
     var listenerPort: Int = 12345,
     var wmsRemoteUrl: String = "",
     var localWMTSServerPort: Int = 35267,
-    var trackerUrl: String = "",
-    var trackerPeerDiscoveryUrl: String = "",
-    var trackerPeerDiscoveryPort: Int = 0,
-    var peerId: String = ""
+    var trackerUrl: String = ""
 )

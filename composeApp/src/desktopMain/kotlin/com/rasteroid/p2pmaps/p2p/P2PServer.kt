@@ -2,8 +2,6 @@ package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.server.TileRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -22,22 +20,20 @@ private fun peerWarning(
     text: String
 ) = log.w("${packet.address}:${packet.port} $text")
 
-suspend fun listen(
-    port: Int,
-) = withContext(Dispatchers.IO) {
-    val serverSocket = DatagramSocket(port)
-    log.i("Listening on port $port for peers")
+fun listen(
+    socket: DatagramSocket
+) {
     try {
         val buffer = ByteArray(8192)
         val packet = DatagramPacket(buffer, buffer.size)
         while (true) {
-            serverSocket.receive(packet)
-            handlePacket(serverSocket, packet)
+            socket.receive(packet)
+            handlePacket(socket, packet)
         }
     } catch (e: Exception) {
         log.e("Error listening for peers", e)
     } finally {
-        serverSocket.close()
+        socket.close()
         log.i("Stopped listening for peers")
     }
 }

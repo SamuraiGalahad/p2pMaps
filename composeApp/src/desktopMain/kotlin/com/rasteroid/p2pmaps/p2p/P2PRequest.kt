@@ -8,14 +8,15 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketTimeoutException
 
 private const val SOCKET_TIMEOUT_MILLIS = 15 * 1000
 
 private val log = Logger.withTag("p2p request")
 
-fun getSocketOnAnyAvailablePort(): DatagramSocket {
+fun getSocketOnAnyAvailablePort(timeout: Int = SOCKET_TIMEOUT_MILLIS): DatagramSocket {
     val socket = DatagramSocket(0)
-    socket.soTimeout = SOCKET_TIMEOUT_MILLIS
+    socket.soTimeout = timeout
     return socket
 }
 
@@ -23,29 +24,45 @@ fun udpHolePunch(
     connectionKey: String,
     peerDiscoveryUrl: String,
     peerDiscoveryPort: Int
-): Pair<DatagramSocket, PeerAddr> {
+): Result<Triple<DatagramSocket, InetAddress, Int>> {
     // Contacting discovery UDP socket on tracker
     // and trying to establish a connection to a peer by UDP hole punching.
     val socket = getSocketOnAnyAvailablePort()
     val buffer = connectionKey.toByteArray()
     val address = InetAddress.getByName(peerDiscoveryUrl)
     val packet = DatagramPacket(buffer, buffer.size, address, peerDiscoveryPort)
+    val receivedPacket = DatagramPacket(ByteArray(1024), 1024)
 
     // Send and wait for peer address reply from tracker.
-    socket.send(packet)
-    val (bytesReceived, peerBuffer) = receive(socket, 1024)
+    for (attempt in 1..5) {
+        try {
+            socket.send(packet)
+            socket.receive(receivedPacket)
+            break
+        } catch (e: SocketTimeoutException) {
+            log.d("Timed out waiting for other peer while hole punching, reattempting...")
+            if (attempt == 5) {
+                log.e("Failed to receive peer address after 5 attempts.")
+                return Result.failure(e)
+            }
+        }
+    }
 
-    // Convert to peer address: address:port.
-    val peerAddressPort = String(peerBuffer.copyOf(bytesReceived)).split(":")
-    val peerAddress = InetAddress.getByName(peerAddressPort[0])
+    // Extract address and port from the received packet
+    // in the form of "address:port".
+    val peerAddressPort = String(receivedPacket.data, 0, receivedPacket.length)
+        .split(":")
+        .map { it.trim() }
+
     val peerPort = peerAddressPort[1].toInt()
+    val peerAddress = InetAddress.getByName(peerAddressPort[0])
 
     // Send a few packets to peer to try to punch through the NAT.
     for (i in 0 until 5) {
         sendAndWaitForReply<Message.Pong>(socket, peerAddress, peerPort, Message.Ping)
     }
 
-    return Pair(socket, PeerAddr(peerAddressPort[0], peerPort))
+    return Result.success(Triple(socket, peerAddress, peerPort))
 }
 
 fun requestLayersTMS(

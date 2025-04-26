@@ -101,6 +101,8 @@ fun <T> parseFromFileOrDefault(
             ensureDefaultFileExists(path) { encoder(defaultValue) }
             defaultValue
         }
+    }.onFailure {
+        println("Failed to parse file, using default value: $it")
     }.getOrDefault(default())
 }
 

@@ -150,6 +150,17 @@ class TileRepository(
         return raw
     }
 
+    // Get all raw layers with TMS links.
+    fun getAllLayersTMSLink(): List<String> {
+        val layers = layersDirectoryPath.toFile().listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?: emptyList()
+
+        return layers.mapNotNull { layer ->
+            getLayerTMSLink(layer)
+        }
+    }
 
     // Get the actual number of downloaded tiles (current, total) for a layer.
     fun getLayerTileCount(
@@ -200,6 +211,15 @@ class TileRepository(
         } else {
             null
         }
+    }
+
+    // Get All Tile Matrix Set metas.
+    fun getAllTMSMetaRaw(): List<String> {
+        val tmsFiles = tmsDirectoryPath.toFile().listFiles()
+            ?.filter { it.isFile && it.extension == "xml" }
+            ?: emptyList()
+
+        return tmsFiles.map { it.readText() }
     }
 
     // Save fixed tile matrix set meta.

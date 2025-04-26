@@ -20,7 +20,7 @@ class ExternalRasterRepository {
 
     private val sourceRefreshDelayMillis = 30 * 1000L // 30 seconds
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val _sourceJobs = mutableMapOf<RasterSource, Job>()
+    private val _sourceJobs = mutableMapOf<RasterSource, CoroutineScope>()
     private val _rasters = MutableStateFlow<Set<SourcedLayerTMS>>(emptySet())
     // rasters are sorted by layer and TMS for stable ordering.
     val rasters = _rasters.map {
@@ -32,8 +32,9 @@ class ExternalRasterRepository {
     fun addSource(source: RasterSource) {
         log.d { "Adding source: ${source.name}" }
         // Launch a collector for the source.
-        val job = launchCollector(source)
-        _sourceJobs[source] = job
+        val scope = launchCollector(source)
+        _sourceJobs[source] = scope
+        source.startBackground(scope)
     }
 
     fun removeSource(source: RasterSource) {
@@ -47,10 +48,11 @@ class ExternalRasterRepository {
 
     private fun launchCollector(
         source: RasterSource
-    ): Job {
+    ): CoroutineScope {
         log.d { "Launching collector for source: ${source.name}" }
         // Launch a coroutine to collect the flow.
-        val job = mainScope.launch {
+        val scope = CoroutineScope(mainScope.coroutineContext + Dispatchers.IO)
+        scope.launch {
             while (mainScope.isActive) {
                 source.getRasters()
                     .onSuccess {
@@ -63,7 +65,7 @@ class ExternalRasterRepository {
                 delay(sourceRefreshDelayMillis)
             }
         }
-        return job
+        return scope
     }
 
     private suspend fun mergeRasters(source: RasterSource, rasters: List<LayerTMS>) = withContext(NonCancellable) {
