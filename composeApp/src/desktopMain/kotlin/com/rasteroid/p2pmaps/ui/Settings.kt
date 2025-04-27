@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.PeerAddr
 import com.rasteroid.p2pmaps.p2p.PeerRepository
+import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
 import com.rasteroid.p2pmaps.vm.SettingsScreenViewModel
 
 private val log = Logger.withTag("settings screen")
@@ -111,6 +112,7 @@ fun PeerSettings(
                             text = peer.toString(),
                             modifier = Modifier.weight(1f)
                         )
+
                         IconButton(onClick = {
                             viewModel.removePeer(peer)
                         }) {

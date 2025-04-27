@@ -117,8 +117,10 @@ class TrackerRasterSource(
             while (scope.isActive) {
                 try {
                     checkForPeerRequests(scope)
+                    isAlive = true
                 } catch (e: Exception) {
-                    log.e("Failed to check for peer requests")
+                    isAlive = false
+                    log.e("Failed to check for peer requests: ${e.message}")
                 }
                 delay(PEER_DISCOVERY_PERIOD)
             }
@@ -135,7 +137,6 @@ class TrackerRasterSource(
                 url {
                     parameter("peerid", Settings.PEER_ID)
                 }
-                contentType(ContentType.Text.Plain)
                 setBody(rawTMS)
             }
             // A bit of a delay to not spam the tracker.
@@ -153,7 +154,6 @@ class TrackerRasterSource(
                 url {
                     parameter("peerid", Settings.PEER_ID)
                 }
-                contentType(ContentType.Text.Plain)
                 setBody(rawLayer)
             }
             // A bit of a delay to not spam the tracker.
@@ -163,10 +163,18 @@ class TrackerRasterSource(
 
     private suspend fun checkForPeerRequests(scope: CoroutineScope) {
         log.d("Checking for requests from other peers")
-        val result = client.get("$remoteUrl/peer/check") {
+        val response = client.get("$remoteUrl/peer/check") {
             parameter("peerid", Settings.PEER_ID)
             contentType(ContentType.Application.Json)
-        }.body<TrackerPeerConnection>()
+        }
+
+        if (response.status.value == 404) {
+            log.d("No requests from other peers")
+            return
+        }
+
+        val result = response.body<TrackerPeerConnection>()
+
         scope.launch {
             val punchResult = udpHolePunch(
                 result.key,

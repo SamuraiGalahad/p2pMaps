@@ -54,7 +54,7 @@ class ExternalRasterRepository {
         val job = mainScope.launch {
                 source.getRasters()
                     .onSuccess {
-                        log.d("Received rasters from source: ${source.name}")
+                        log.d("Received ${it.size} rasters from source: ${source.name}")
                         mergeRasters(source, it)
                     }
                     .onFailure {

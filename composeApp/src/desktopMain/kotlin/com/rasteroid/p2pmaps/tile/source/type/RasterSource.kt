@@ -7,6 +7,9 @@ abstract class RasterSource(
     val name: String,
     val type: RasterSourceType
 ) {
+    var isAlive = true
+        protected set
+
     abstract suspend fun getRasters(): Result<List<LayerTMS>>
 
     abstract suspend fun download(

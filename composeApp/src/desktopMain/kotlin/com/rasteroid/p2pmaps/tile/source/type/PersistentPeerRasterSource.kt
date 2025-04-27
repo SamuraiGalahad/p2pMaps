@@ -44,8 +44,10 @@ class PersistentPeerRasterSource(
             port
         ).getOrElse {
             log.e("Failed to get layers from peer: $it")
+            isAlive = false
             return Result.failure(it)
         }
+        isAlive = true
         log.d("Received layers from peer: $layers")
         return Result.success(layers.layers)
     }
