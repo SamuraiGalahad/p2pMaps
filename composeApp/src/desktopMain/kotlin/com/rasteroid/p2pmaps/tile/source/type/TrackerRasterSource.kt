@@ -27,7 +27,7 @@ private const val ANNOUNCE_PERIOD = 60_000L // 60 seconds
 private const val PEER_DISCOVERY_PERIOD = 10_000L // 10 seconds
 
 class TrackerRasterSource(
-    private val remoteUrl: String
+    val remoteUrl: String
 ) : RasterSource(
     "Tracker",
     RasterSourceType.PEER

@@ -9,16 +9,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.p2p.PeerAddr
 import com.rasteroid.p2pmaps.p2p.PeerRepository
-import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
+import com.rasteroid.p2pmaps.tile.source.type.PersistentPeerRasterSource
+import com.rasteroid.p2pmaps.tile.source.type.TrackerRasterSource
 import com.rasteroid.p2pmaps.vm.SettingsScreenViewModel
 
 private val log = Logger.withTag("settings screen")
@@ -36,6 +41,7 @@ fun SettingsScreen(
 fun PeerSettings(
     viewModel: SettingsScreenViewModel,
 ) {
+    val addedSources by viewModel.addedSources.collectAsState()
     val scrollState = rememberScrollState()
 
     // Helper function to attempt adding a new peer.
@@ -102,19 +108,33 @@ fun PeerSettings(
             .heightIn(max = 150.dp)
         ) {
             LazyColumn {
-                items(viewModel.addedPeers) { peer ->
+                items(addedSources.filterIsInstance<PersistentPeerRasterSource>()) { peer ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Display the peer info.
                         Text(
-                            text = peer.toString(),
-                            modifier = Modifier.weight(1f)
+                            text = "${peer.host}:${peer.port}"
                         )
-
+                        Spacer(Modifier.width(8.dp))
+                        // Draw a red/green circle based on isAlive.
+                        if (peer.isAlive) {
+                            Icon(
+                                Icons.Filled.Circle,
+                                contentDescription = "Peer is alive",
+                                tint = Color.Green.copy(alpha = 0.5f)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Circle,
+                                contentDescription = "Peer is not alive",
+                                tint = Color.Red.copy(alpha = 0.5f)
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
                         IconButton(onClick = {
-                            viewModel.removePeer(peer)
+                            viewModel.removePeer(PeerAddr(peer.host, peer.port))
                         }) {
                             Icon(Icons.Filled.Close, contentDescription = "Remove Peer")
                         }
@@ -141,18 +161,33 @@ fun PeerSettings(
             .heightIn(max = 150.dp)
         ) {
             LazyColumn {
-                items(viewModel.addedTrackers) { tracker ->
+                items(addedSources.filterIsInstance<TrackerRasterSource>()) { tracker ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Display the tracker info.
                         Text(
-                            text = tracker,
-                            modifier = Modifier.weight(1f)
+                            text = tracker.remoteUrl,
                         )
+                        Spacer(Modifier.width(8.dp))
+                        // Draw a red/green circle based on isAlive.
+                        if (tracker.isAlive) {
+                            Icon(
+                                Icons.Filled.Circle,
+                                contentDescription = "Tracker is alive",
+                                tint = Color.Green.copy(alpha = 0.5f),
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Circle,
+                                contentDescription = "Tracker is not alive",
+                                tint = Color.Red.copy(alpha = 0.5f),
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
                         IconButton(onClick = {
-                            viewModel.removeTracker(tracker)
+                            viewModel.removeTracker(tracker.remoteUrl)
                         }) {
                             Icon(Icons.Filled.Close, contentDescription = "Remove Tracker")
                         }

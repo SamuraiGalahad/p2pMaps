@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import com.rasteroid.p2pmaps.server.ProgressLayerTMS
 import com.rasteroid.p2pmaps.server.TileRepository
+import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
 import com.rasteroid.p2pmaps.tile.TileFormat
 import kotlin.concurrent.fixedRateTimer
 

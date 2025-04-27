@@ -16,8 +16,8 @@ private val log = Logger.withTag("persistent peer raster source")
 // The idea is that we can still query peers that didn't have their addresses changed
 // after we saved them to a file.
 class PersistentPeerRasterSource(
-    private val host: String,
-    private val port: Int
+    val host: String,
+    val port: Int
 ) : RasterSource(
     "Saved Peers",
     RasterSourceType.PEER

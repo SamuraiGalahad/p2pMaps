@@ -28,12 +28,19 @@ class ExternalRasterRepository {
             .sortedBy { raster -> raster.layerTMS.layer }
             .sortedBy { raster -> raster.layerTMS.tileMatrixSet }
     }.stateIn(mainScope, SharingStarted.Eagerly, emptyList())
+    private val _sources = MutableStateFlow<Set<RasterSource>>(emptySet())
+    val sources = _sources.asStateFlow()
 
     fun addSource(source: RasterSource) {
         log.d { "Adding source: ${source.name}" }
         // Launch a collector for the source.
         val scope = launchCollector(source)
         _sourceJobs[source] = scope
+        _sources.update {
+            current -> current.toMutableSet().apply {
+                add(source)
+            }
+        }
         source.startBackground(scope)
     }
 
@@ -41,6 +48,11 @@ class ExternalRasterRepository {
         log.d { "Removing source: ${source.name}" }
         // Cancel the collector for the source.
         _sourceJobs[source]?.cancel()
+        _sources.update {
+            current -> current.toMutableSet().apply {
+                remove(source)
+            }
+        }
         _sourceJobs.remove(source)
     }
 

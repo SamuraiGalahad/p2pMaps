@@ -11,12 +11,12 @@ import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
 import com.rasteroid.p2pmaps.tile.source.type.TrackerRasterSource
 
 class SettingsScreenViewModel : ViewModel() {
-    var addedPeers by mutableStateOf(PeerRepository.instance.persistentPeers)
+    val addedSources = ExternalRasterRepository.instance.sources
+
     var listenerPort by mutableStateOf(Settings.APP_CONFIG.listenerPort.toString())
     var listenerPortIsError by mutableStateOf(false)
     var newPeerInput by mutableStateOf("")
 
-    var addedTrackers by mutableStateOf(Settings.APP_CONFIG.trackerUrls)
     var newTrackerInput by mutableStateOf("")
 
     var localWMTSServerPort by mutableStateOf(Settings.APP_CONFIG.localWMTSServerPort.toString())
@@ -48,12 +48,10 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun addPeer(peer: PeerAddr) {
         PeerRepository.instance.addPersistentPeer(peer)
-        addedPeers = PeerRepository.instance.persistentPeers
     }
 
     fun removePeer(peer: PeerAddr) {
         PeerRepository.instance.removePeer(peer)
-        addedPeers = PeerRepository.instance.persistentPeers
     }
 
     fun addTracker(tracker: String) {
@@ -61,7 +59,6 @@ class SettingsScreenViewModel : ViewModel() {
         ExternalRasterRepository.instance.addSource(TrackerRasterSource(tracker))
         Settings.APP_CONFIG.trackerUrls += tracker
         Settings.writeAppConfig()
-        addedTrackers = Settings.APP_CONFIG.trackerUrls
         newTrackerInput = ""
     }
 
@@ -70,7 +67,6 @@ class SettingsScreenViewModel : ViewModel() {
             ExternalRasterRepository.instance.removeSource(TrackerRasterSource(tracker))
             Settings.APP_CONFIG.trackerUrls -= tracker
             Settings.writeAppConfig()
-            addedTrackers = Settings.APP_CONFIG.trackerUrls
         }
     }
 }
