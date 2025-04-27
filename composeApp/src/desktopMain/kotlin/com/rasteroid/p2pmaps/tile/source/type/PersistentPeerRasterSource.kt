@@ -134,6 +134,9 @@ class PersistentPeerRasterSource(
     }
 
     override fun hashCode(): Int {
-        return javaClass.hashCode()
+        // Include host and port in hash code.
+        var result = host.hashCode()
+        result = 31 * result + port
+        return result
     }
 }

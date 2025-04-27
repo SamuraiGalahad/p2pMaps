@@ -281,6 +281,7 @@ class TrackerRasterSource(
     }
 
     override fun hashCode(): Int {
-        return javaClass.hashCode()
+        // Include remoteUrl in hash code.
+        return remoteUrl.hashCode()
     }
 }

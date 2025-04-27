@@ -50,10 +50,8 @@ class ExternalRasterRepository {
         source: RasterSource
     ): CoroutineScope {
         log.d { "Launching collector for source: ${source.name}" }
-        // Launch a coroutine to collect the flow.
-        val scope = CoroutineScope(mainScope.coroutineContext + Dispatchers.IO)
-        scope.launch {
-            while (mainScope.isActive) {
+        // Launch a coroutine to collect the flow. )
+        val job = mainScope.launch {
                 source.getRasters()
                     .onSuccess {
                         log.d("Received rasters from source: ${source.name}")
@@ -63,9 +61,9 @@ class ExternalRasterRepository {
                         log.e("Failed to get rasters from source: ${source.name}")
                     }
                 delay(sourceRefreshDelayMillis)
-            }
         }
-        return scope
+        // Return a child of this scope.
+        return CoroutineScope(mainScope.coroutineContext + job)
     }
 
     private suspend fun mergeRasters(source: RasterSource, rasters: List<LayerTMS>) = withContext(NonCancellable) {
