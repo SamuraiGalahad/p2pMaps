@@ -142,10 +142,12 @@ class TileRepository(
 
         // Append TMS links to the raw info.
         tmsDir.forEach { tms ->
-            raw += "<TileMatrixSetLink>\n"
-            raw += "<TileMatrixSet>$tms</TileMatrixSet>\n"
-            raw += "</TileMatrixSetLink>\n"
+            raw += "    <TileMatrixSetLink>\n"
+            raw += "    <TileMatrixSet>$tms</TileMatrixSet>\n"
+            raw += "    </TileMatrixSetLink>\n"
         }
+
+        raw += "</Layer>\n"
 
         return raw
     }

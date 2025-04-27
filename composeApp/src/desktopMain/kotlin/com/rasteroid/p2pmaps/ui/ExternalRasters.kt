@@ -1,11 +1,13 @@
 package com.rasteroid.p2pmaps.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.Button
-import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,7 +34,7 @@ fun RasterGridScreen(viewModel: ExternalRastersViewModel) {
         contentPadding = PaddingValues(8.dp)
     ) {
         items(rasters) { sourcedRasterMeta ->
-            RasterCard(sourcedRasterMeta) {
+            DownloadRasterCard(sourcedRasterMeta) {
                 viewModel.onDownloadSource(it)
             }
         }
@@ -40,29 +42,20 @@ fun RasterGridScreen(viewModel: ExternalRastersViewModel) {
 }
 
 @Composable
-fun RasterCard(
+fun DownloadRasterCard(
     sourcedLayerTMS: SourcedLayerTMS,
     onDownloadClick: (SourcedLayerTMS) -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
+    RasterCard(
+        sourcedLayerTMS.layerTMS.layer,
+        sourcedLayerTMS.layerTMS.tileMatrixSet
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Text(text = "Source: ${sourcedLayerTMS.source.name}")
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { onDownloadClick(sourcedLayerTMS) }
         ) {
-            Text(text = "Layer: ${sourcedLayerTMS.layerTMS.layer}")
-            Text(text = "TileMatrixSet: ${sourcedLayerTMS.layerTMS.tileMatrixSet}")
-            Text(text = "Source: ${sourcedLayerTMS.source.name}")
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { onDownloadClick(sourcedLayerTMS) }
-            ) {
-                Text("Download")
-            }
+            Text("Download")
         }
     }
 }

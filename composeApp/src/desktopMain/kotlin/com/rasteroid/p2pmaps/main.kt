@@ -16,11 +16,13 @@ fun main() {
     Logger.addLogWriter(lastLogs)
 
     // Set up tracker.
-    ExternalRasterRepository.instance.addSource(
-        TrackerRasterSource(
-            Settings.APP_CONFIG.trackerUrl
+    for (trackerUrl in Settings.APP_CONFIG.trackerUrls) {
+        ExternalRasterRepository.instance.addSource(
+            TrackerRasterSource(
+                trackerUrl
+            )
         )
-    )
+    }
 
     val server = WMTSServer(
         port = Settings.APP_CONFIG.localWMTSServerPort,

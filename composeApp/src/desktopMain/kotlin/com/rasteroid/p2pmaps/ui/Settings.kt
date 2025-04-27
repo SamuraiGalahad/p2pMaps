@@ -3,7 +3,9 @@ package com.rasteroid.p2pmaps.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -33,6 +35,8 @@ fun SettingsScreen(
 fun PeerSettings(
     viewModel: SettingsScreenViewModel,
 ) {
+    val scrollState = rememberScrollState()
+
     // Helper function to attempt adding a new peer.
     fun tryAddPeer() {
         // Example validation: expect input in "host:port" format.
@@ -50,7 +54,22 @@ fun PeerSettings(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    fun tryAddTracker() {
+        val tracker = viewModel.newTrackerInput
+        if (tracker.isNotEmpty()) {
+            viewModel.addTracker(tracker)
+            log.d("Added tracker: $tracker")
+        } else {
+            log.i("Invalid tracker URL")
+        }
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
         Text("Peer-to-peer", style = MaterialTheme.typography.h6)
         Text("Port to listen on for local peers")
         TextField(
@@ -101,5 +120,56 @@ fun PeerSettings(
                 }
             }
         }
+        Text("Trackers", style = MaterialTheme.typography.h6)
+        Text("Manually add tracker")
+        TextField(
+            value = viewModel.newTrackerInput,
+            onValueChange = { viewModel.newTrackerInput = it },
+            placeholder = { Text("tracker url") },
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { tryAddTracker() }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add Tracker")
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 150.dp)
+        ) {
+            LazyColumn {
+                items(viewModel.addedTrackers) { tracker ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Display the tracker info.
+                        Text(
+                            text = tracker,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            viewModel.removeTracker(tracker)
+                        }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Remove Tracker")
+                        }
+                    }
+                }
+            }
+        }
+        Text("Local WMTS server", style = MaterialTheme.typography.h6)
+        Text("Port to listen on for local WMTS server (restart app to apply)")
+        TextField(
+            value = viewModel.localWMTSServerPort,
+            onValueChange = {
+                viewModel.setLocalWMTSServerPortValue(it)
+            },
+            isError = viewModel.localWMTSServerPortIsError,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            placeholder = { Text("port") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

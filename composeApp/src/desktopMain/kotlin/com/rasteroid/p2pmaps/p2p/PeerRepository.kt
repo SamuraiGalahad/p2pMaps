@@ -42,8 +42,13 @@ class PeerRepository(
 
         log.d("Loaded peers from config: ${Settings.APP_CONFIG.peers}")
 
-        Settings.APP_CONFIG.peers.forEach {
-            addPersistentPeer(it, false)
+        Settings.APP_CONFIG.peers.forEach { peer ->
+            PeerAddr.fromString(peer)
+                .onSuccess {
+                    addPersistentPeer(it, false)
+                }.onFailure {
+                    log.e("Failed to add peer address: $peer", it)
+                }
         }
 
         runCatching {
@@ -61,6 +66,7 @@ class PeerRepository(
     }
 
     fun addPersistentPeer(peer: PeerAddr, save: Boolean = true) {
+        log.d("Adding persistent peer: $peer")
         val existingPeer = peers.find { it.peerAddr == peer }
         if (existingPeer != null) {
             if (!existingPeer.isPersistent) {
@@ -103,7 +109,7 @@ class PeerRepository(
 
     private fun savePersistentPeers() {
         log.i("Saving persistent peers ${Settings.APP_CONFIG_FILE_PATH}")
-        Settings.APP_CONFIG.peers = persistentPeers
+        Settings.APP_CONFIG.peers = persistentPeers.map { it.toString() }
         Settings.writeAppConfig()
     }
 }

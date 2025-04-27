@@ -39,16 +39,55 @@ class TrackerRasterSource(
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TrackerRasterSource) return false
+        if (remoteUrl != other.remoteUrl) return false
+        return true
+    }
+
     override suspend fun getRasters(): Result<List<LayerTMS>> {
-        // Request $remote_url/maps from the server and wrap it in a Result.
+        // We basically request /GetCapabilities from the tracker
+        // and parse layers and TileMatrixSets from the response.
+        // THe simple way is to just treat the XML response as plain text
+        // and extract combinations of layers and TMSs that is has.
         try {
-            val rasters = client
-                .get("$remoteUrl/maps")
-                .body<List<LayerTMS>>()
-            log.d("Received rasters from tracker: $rasters")
-            return Result.success(rasters)
+            val result = client.get("$remoteUrl/GetCapabilities")
+                .body<String>()
+
+            val layers = mutableListOf<LayerTMS>()
+            var parsingLayer = false
+            var layerId = ""
+            // Just parse the document line by line.
+            // We assume the document is divided into lines.
+            for (rawLine in result.lines()) {
+                // Check if the line contains a layer and TMS.
+                val line = rawLine.trim()
+                if (line.startsWith("<Layer>")) {
+                    parsingLayer = true
+                    continue
+                }
+
+                if (line.startsWith("</Layer>")) {
+                    parsingLayer = false
+                    layerId = ""
+                    continue
+                }
+
+                if (parsingLayer) {
+                    // Check if the line contains a layer and TMS.
+                    if (line.startsWith("<ows:Identifier>")) {
+                        layerId = line.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
+                    } else if (line.startsWith("<TileMatrixSet>")) {
+                        val tmsId = line.substringAfter("<TileMatrixSet>").substringBefore("</TileMatrixSet>")
+                        layers.add(LayerTMS(layerId, tmsId))
+                    }
+                }
+            }
+
+            return Result.success(layers)
         } catch (e: Exception) {
-            log.e("Failed to get rasters from tracker")
+            log.e("Failed to get layers from tracker: ${e.message}")
             return Result.failure(e)
         }
     }
@@ -57,11 +96,31 @@ class TrackerRasterSource(
         scope.launch {
             while (scope.isActive) {
                 try {
-                    announce()
+                    announceTMSs()
                 } catch (e: Exception) {
-                    log.e("Failed to announce to tracker")
+                    log.e("Failed to announce TMSs to tracker")
                 }
                 delay(ANNOUNCE_PERIOD)
+            }
+        }
+        scope.launch {
+            while (scope.isActive) {
+                try {
+                    announceLayers()
+                } catch (e: Exception) {
+                    log.e("Failed to announce layers to tracker")
+                }
+                delay(ANNOUNCE_PERIOD)
+            }
+        }
+        scope.launch {
+            while (scope.isActive) {
+                try {
+                    checkForPeerRequests(scope)
+                } catch (e: Exception) {
+                    log.e("Failed to check for peer requests")
+                }
+                delay(PEER_DISCOVERY_PERIOD)
             }
         }
     }
@@ -71,6 +130,7 @@ class TrackerRasterSource(
         log.d("Announcing ${rawTMSs.size} TMSs to tracker")
 
         for (rawTMS in rawTMSs) {
+            log.d("Announcing rawTMS: $rawTMS")
             client.post("$remoteUrl/announce/tms") {
                 url {
                     parameter("peerid", Settings.PEER_ID)
@@ -88,6 +148,7 @@ class TrackerRasterSource(
         log.d("Announcing ${rawLayers.size} layers to tracker")
 
         for (rawLayer in rawLayers) {
+            log.d("Announcing rawLayer: $rawLayer")
             client.post("$remoteUrl/announce/layer") {
                 url {
                     parameter("peerid", Settings.PEER_ID)
@@ -100,15 +161,10 @@ class TrackerRasterSource(
         }
     }
 
-    private suspend fun announce() {
-        log.i("Announcing to tracker")
-        announceTMSs()
-        announceLayers()
-    }
-
     private suspend fun checkForPeerRequests(scope: CoroutineScope) {
         log.d("Checking for requests from other peers")
         val result = client.get("$remoteUrl/peer/check") {
+            parameter("peerid", Settings.PEER_ID)
             contentType(ContentType.Application.Json)
         }.body<TrackerPeerConnection>()
         scope.launch {
@@ -135,6 +191,7 @@ class TrackerRasterSource(
         return client
             .get("$remoteUrl/peer/ask") {
                 url {
+                    parameter("peerid", Settings.PEER_ID)
                     parameter("layer", layer)
                     parameter("tms", tileMatrixSet)
                 }
@@ -221,5 +278,9 @@ class TrackerRasterSource(
         )
 
         // TODO: Need to save layer info (<layer>/info.xml)
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
     }
 }

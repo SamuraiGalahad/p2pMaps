@@ -25,6 +25,16 @@ class PersistentPeerRasterSource(
     // Open datagram socket on random port.
     private val socket = getSocketOnAnyAvailablePort()
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PersistentPeerRasterSource) return false
+
+        if (host != other.host) return false
+        if (port != other.port) return false
+
+        return true
+    }
+
     override suspend fun getRasters(): Result<List<LayerTMS>> {
         val layers = requestLayersTMS(
             socket,
@@ -121,5 +131,9 @@ class PersistentPeerRasterSource(
                 }
             }
         }
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
     }
 }
