@@ -93,7 +93,7 @@ class TileRepository(
             meta.tileRow,
             meta.format
         )
-        ensureDirectoryExists(tilePath)
+        ensureDirectoryExists(tilePath.parent)
         tilePath.toFile().writeBytes(tile)
     }
 
