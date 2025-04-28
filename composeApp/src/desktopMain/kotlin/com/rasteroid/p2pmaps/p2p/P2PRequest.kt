@@ -123,18 +123,20 @@ fun requestTile(
         meta
     ).getOrElse { return Result.failure(it) }
 
-    // Sequentially request tile by chunks of 4096 bytes.
+    log.d("Received tile size: ${tileSize.dataSizeBytes} bytes")
+
     val tile = ByteArray(tileSize.dataSizeBytes)
     var offset = 0
     while (offset < tile.size) {
-        val chunkSize = minOf(4096, tile.size - offset)
+        val chunkSize = minOf(1024, tile.size - offset)
         val reply = sendAndWaitForReply<Message.TileReply>(
             socket,
             address,
             port,
             Message.Tile(meta, offset, chunkSize)
         ).getOrElse { return Result.failure(it) }
-        reply.tile.copyInto(tile, offset)
+        // Copy the received chunk into the tile array.
+        System.arraycopy(reply.tile, 0, tile, offset, chunkSize)
         offset += chunkSize
     }
 
@@ -155,8 +157,7 @@ private inline fun <reified ReplyType : Message> sendAndWaitForReply(
 private inline fun <reified ReplyType : Message> waitForReply(
     socket: DatagramSocket,
 ): Result<ReplyType> {
-    // TODO: Add timeouts.
-    val (bytesRead, buffer) = receive(socket, 8192)
+    val (bytesRead, buffer) = receive(socket, 1024)
     if (bytesRead <= 0) return Result.failure(Exception("Peer unexpectedly closed connection."))
     val reply = ProtoBuf.decodeFromByteArray<Message>(buffer.copyOf(bytesRead))
     if (reply !is ReplyType) return Result.failure(Exception("Unexpected message received from peer: $reply"))

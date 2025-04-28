@@ -24,10 +24,12 @@ fun listen(
     socket: DatagramSocket
 ) {
     try {
-        val buffer = ByteArray(8192)
-        val packet = DatagramPacket(buffer, buffer.size)
         while (true) {
+            val buffer = ByteArray(1500)
+            val packet = DatagramPacket(buffer, buffer.size)
             socket.receive(packet)
+            packet.data = packet.data.copyOf(packet.length)
+            log.d("Received packet from ${packet.address}:${packet.port}, length: ${packet.length}")
             handlePacket(socket, packet)
         }
     } catch (e: Exception) {
@@ -125,6 +127,3 @@ private fun unexpected(
 ) {
     peerWarning(packet, "Unexpected message: ${message.javaClass.simpleName}")
 }
-
-
-
