@@ -268,6 +268,8 @@ class TrackerRasterSource(
                         return
                     }
 
+                    log.d("Received tile, size: ${bytes.size} bytes")
+
                     // Save the tile to disk.
                     TileRepository.instance.saveTile(
                         tileMeta,
