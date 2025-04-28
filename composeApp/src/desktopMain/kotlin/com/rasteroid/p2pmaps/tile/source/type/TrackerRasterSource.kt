@@ -2,10 +2,7 @@ package com.rasteroid.p2pmaps.tile.source.type
 
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
-import com.rasteroid.p2pmaps.p2p.listen
-import com.rasteroid.p2pmaps.p2p.requestTile
-import com.rasteroid.p2pmaps.p2p.requestTileMatrixSet
-import com.rasteroid.p2pmaps.p2p.udpHolePunch
+import com.rasteroid.p2pmaps.p2p.*
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.dto.TrackerPeerConnection
 import com.rasteroid.p2pmaps.tile.LayerTMS
@@ -291,7 +288,23 @@ class TrackerRasterSource(
             tmsMeta
         )
 
-        // TODO: Need to save layer info (<layer>/info.xml)
+        // Request layer info.
+        val layerMetaRequestResult = requestLayer(socket, address, port, layerTMS.layer)
+        if (layerMetaRequestResult.isFailure) {
+            log.e("Failed to get layer from peer, aborting download")
+            return
+        }
+
+        val layerMetaResult = layerMetaRequestResult.getOrThrow()
+        val raster = layerMetaResult.raster
+        if (raster == null) {
+            log.e("Failed to get layer from peer, aborting download")
+            return
+        }
+
+        TileRepository.instance.saveLayerMeta(layerTMS.layer, raster)
+
+        log.d("Successfully downloaded layer: ${layerTMS.layer}, tms: ${layerTMS.tileMatrixSet}")
     }
 
     override fun hashCode(): Int {

@@ -212,6 +212,18 @@ class TileRepository(
         return totalTiles
     }
 
+    // Save layer meta
+    fun saveLayerMeta(layer: String, layerMeta: LayerMeta) {
+        val layerPath = layersDirectoryPath.resolve(layer)
+        val infoPath = layerPath.resolve("info.xml")
+        if (infoPath.toFile().exists()) {
+            // We don't need to edit any meta if it already exists.
+            return
+        }
+        ensureDirectoryExists(layerPath.parent)
+        infoPath.toFile().writeText(layerMeta.toXML())
+    }
+
     /*
     Tile Matrix Set requests.
     */

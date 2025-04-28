@@ -80,7 +80,8 @@ private fun handleTile(
         message.meta.tileCol,
         message.meta.tileRow,
         message.meta.format,
-        message.offsetBytes
+        message.offsetBytes,
+        message.limitBytes
     ) ?: ByteArray(0)
     send(socket, packet.address, packet.port, Message.TileReply(tile))
 }
