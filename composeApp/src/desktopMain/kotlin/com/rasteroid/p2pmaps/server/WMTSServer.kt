@@ -33,7 +33,9 @@ class WMTSServer(
     }
 
     private fun getWMTSCapabilitiesTemplate(): String {
-        val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("wmts-capabilities-template.xml")!!
+        val stream = Thread.currentThread()
+            .contextClassLoader
+            .getResourceAsStream("wmts-capabilities-template.xml")!!
         // Template has empty <contents> tag, we need to add contents from the repository.
         val contents = tileRepository.getContents()
         return stream.bufferedReader().use { it.readText().replace("{{ contents }}", contents) }

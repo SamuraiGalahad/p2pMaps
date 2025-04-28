@@ -143,7 +143,7 @@ fun PeerSettings(
             }
         }
         Text("Trackers", style = MaterialTheme.typography.h6)
-        Text("Manually add tracker")
+        Text("Manually add trackers")
         TextField(
             value = viewModel.newTrackerInput,
             onValueChange = { viewModel.newTrackerInput = it },

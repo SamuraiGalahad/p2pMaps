@@ -15,6 +15,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +23,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.decodeFromJsonElement
 
 private const val ANNOUNCE_PERIOD = 60_000L // 60 seconds
 private const val PEER_DISCOVERY_PERIOD = 10_000L // 10 seconds
@@ -52,7 +55,7 @@ class TrackerRasterSource(
         // THe simple way is to just treat the XML response as plain text
         // and extract combinations of layers and TMSs that is has.
         try {
-            val result = client.get("$remoteUrl/GetCapabilities")
+            val result = client.get("$remoteUrl/layers/GetCapabilities")
                 .body<String>()
 
             val layers = mutableListOf<LayerTMS>()
@@ -63,6 +66,7 @@ class TrackerRasterSource(
             for (rawLine in result.lines()) {
                 // Check if the line contains a layer and TMS.
                 val line = rawLine.trim()
+
                 if (line.startsWith("<Layer>")) {
                     parsingLayer = true
                     continue
@@ -76,7 +80,7 @@ class TrackerRasterSource(
 
                 if (parsingLayer) {
                     // Check if the line contains a layer and TMS.
-                    if (line.startsWith("<ows:Identifier>")) {
+                    if (layerId.isEmpty() && line.startsWith("<ows:Identifier>")) {
                         layerId = line.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
                     } else if (line.startsWith("<TileMatrixSet>")) {
                         val tmsId = line.substringAfter("<TileMatrixSet>").substringBefore("</TileMatrixSet>")
@@ -163,12 +167,12 @@ class TrackerRasterSource(
 
     private suspend fun checkForPeerRequests(scope: CoroutineScope) {
         log.d("Checking for requests from other peers")
-        val response = client.get("$remoteUrl/peer/check") {
+        val response = client.get("$remoteUrl/peers/check") {
             parameter("peerid", Settings.PEER_ID)
             contentType(ContentType.Application.Json)
         }
 
-        if (response.status.value == 404) {
+        if (response.status.value == 204) {
             log.d("No requests from other peers")
             return
         }
@@ -197,13 +201,13 @@ class TrackerRasterSource(
         tileMatrixSet: String
     ): TrackerPeerConnection {
         return client
-            .get("$remoteUrl/peer/ask") {
+            .get("$remoteUrl/peers/ask") {
                 url {
                     parameter("peerid", Settings.PEER_ID)
                     parameter("layer", layer)
                     parameter("tms", tileMatrixSet)
                 }
-            }.body()
+            }.body<TrackerPeerConnection>()
     }
 
     override suspend fun download(
@@ -212,7 +216,7 @@ class TrackerRasterSource(
     ) {
         // Request peers for this raster.
         val peerConnection = getPeerSessionKey(layerTMS.layer, layerTMS.tileMatrixSet)
-
+        log.d("before udp hole punch")
         // Hole punch to the peer.
         val (socket, address, port) = udpHolePunch(
             peerConnection.key,

@@ -1,11 +1,15 @@
 package com.rasteroid.p2pmaps.server
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
 import com.rasteroid.p2pmaps.server.dto.TrackerAnnounce
 import com.rasteroid.p2pmaps.tile.*
 import java.nio.file.Path
+import kotlin.concurrent.fixedRateTimer
 
 private val log = Logger.withTag("tile repo")
 
@@ -20,7 +24,8 @@ class TileRepository(
 ) {
     private val layersDirectoryPath = dataDirectoryPath.resolve("layers")
     private val tmsDirectoryPath = dataDirectoryPath.resolve("tms")
-    val layers: List<LayerTMS> = getLayerTMSs()
+    var layers by mutableStateOf(getLayerTMSs())
+        private set
 
     init {
         ensureDirectoryExists(layersDirectoryPath)
@@ -28,6 +33,14 @@ class TileRepository(
 
         // Load all layer + tms combinations.
         log.i("Initialized ${layers.size} rasters")
+
+        fixedRateTimer(
+            name = "Layers refresh job",
+            period = 5_000,
+            initialDelay = 1_000
+        ) {
+            layers = getLayerTMSs()
+        }
     }
 
     /*
@@ -246,7 +259,16 @@ class TileRepository(
     fun getContents(): String {
         // Basically manually building the Contents tag of the WMTS capabilities.
         val contents = StringBuilder("<Contents>\n")
-
+        // Populate with layers.
+        val layerTMSLinks = getAllLayersTMSLink()
+        for (layerTMS in layerTMSLinks) {
+            contents.append(layerTMS)
+        }
+        // Populate with tile matrix sets.
+        val TMSs = getAllTMSMetaRaw()
+        for (tms in TMSs) {
+            contents.append(tms)
+        }
         contents.append("</Contents>\n")
         return contents.toString()
     }

@@ -18,8 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import co.touchlab.kermit.Logger
+import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.tile.SourcedLayerTMS
 import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
+
+private val log = Logger.withTag("external rasters screen")
 
 @Composable
 fun BrowseRastersScreen(
@@ -82,7 +86,10 @@ fun DownloadRasterCard(
     ) {
         Text(text = "Source: ${sourcedLayerTMS.source.name}")
         Spacer(modifier = Modifier.height(8.dp))
+        log.d("button: ${sourcedLayerTMS.layerTMS} repo: ${TileRepository.instance.layers}")
         Button(
+            enabled = sourcedLayerTMS.source.isAlive
+                    && !TileRepository.instance.layers.contains(sourcedLayerTMS.layerTMS),
             onClick = { onDownloadClick(sourcedLayerTMS) }
         ) {
             Text("Download")

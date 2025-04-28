@@ -34,6 +34,7 @@ fun udpHolePunch(
     val receivedPacket = DatagramPacket(ByteArray(1024), 1024)
 
     // Send and wait for peer address reply from tracker.
+    log.d("Starting UDP Hole punch. key: $connectionKey address: $address port: $peerDiscoveryPort")
     for (attempt in 1..5) {
         try {
             socket.send(packet)
@@ -50,8 +51,9 @@ fun udpHolePunch(
 
     // Extract address and port from the received packet
     // in the form of "address:port".
-    val peerAddressPort = String(receivedPacket.data, 0, receivedPacket.length)
-        .split(":")
+    val peerAddressPortRaw = String(receivedPacket.data, 0, receivedPacket.length)
+    log.d("peerAddressPort: $peerAddressPortRaw")
+    val peerAddressPort = peerAddressPortRaw.split(":")
         .map { it.trim() }
 
     val peerPort = peerAddressPort[1].toInt()
