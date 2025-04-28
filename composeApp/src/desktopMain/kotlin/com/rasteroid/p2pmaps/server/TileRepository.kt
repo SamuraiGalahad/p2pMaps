@@ -244,7 +244,7 @@ class TileRepository(
             // We don't need to edit any meta if it already exists.
             return
         }
-        ensureDirectoryExists(tmsPath)
+        ensureDirectoryExists(tmsPath.parent)
         tmsPath.toFile().writeText(tmsMeta.toXML())
     }
 
