@@ -12,7 +12,6 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +19,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.decodeFromJsonElement
 
 private const val ANNOUNCE_PERIOD = 60_000L // 60 seconds
 private const val PEER_DISCOVERY_PERIOD = 10_000L // 10 seconds
@@ -303,6 +300,9 @@ class TrackerRasterSource(
         }
 
         TileRepository.instance.saveLayerMeta(layerTMS.layer, raster)
+
+        // Send closing message.
+        send(socket, address, port, Message.Close)
 
         log.d("Successfully downloaded layer: ${layerTMS.layer}, tms: ${layerTMS.tileMatrixSet}")
     }

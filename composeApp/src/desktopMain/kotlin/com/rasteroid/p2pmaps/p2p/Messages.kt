@@ -19,6 +19,10 @@ sealed class Message {
     data object Pong : Message()
 
     @Serializable
+    @SerialName("messages.close")
+    data object Close : Message()
+
+    @Serializable
     @SerialName("message.layers")
     // Request a list of available rasters (layer id + tile matrix set id).
     data object Layers : Message()

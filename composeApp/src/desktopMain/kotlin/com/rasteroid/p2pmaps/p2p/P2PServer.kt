@@ -24,7 +24,7 @@ fun listen(
     socket: DatagramSocket
 ) {
     try {
-        while (true) {
+        while (!socket.isClosed) {
             val buffer = ByteArray(1500)
             val packet = DatagramPacket(buffer, buffer.size)
             socket.receive(packet)
@@ -45,6 +45,7 @@ fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
     val message = ProtoBuf.decodeFromByteArray<Message>(packet.data)
     peerInfo(packet, "Received ${message.javaClass.simpleName}")
     when (message) {
+        is Message.Close -> handleClose(socket, packet)
         is Message.Ping -> handlePing(socket, packet)
         is Message.Layers -> handleLayers(socket, packet)
         is Message.Layer -> handleLayer(socket, packet, message)
@@ -53,6 +54,14 @@ fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
         is Message.Tile -> handleTile(socket, packet, message)
         else -> unexpected(packet, message)
     }
+}
+
+private fun handleClose(
+    socket: DatagramSocket,
+    packet: DatagramPacket
+) {
+    peerInfo(packet, "Closing connection")
+    socket.close()
 }
 
 private fun handlePing(

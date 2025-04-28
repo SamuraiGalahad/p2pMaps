@@ -1,5 +1,6 @@
 package com.rasteroid.p2pmaps.tile
 
+import co.touchlab.kermit.Logger
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,6 +29,8 @@ data class TileMeta(
     val format: TileFormat
 )
 
+private val log = Logger.withTag("TileMeta")
+
 @Serializable
 // Fixed Layer meta, stored in files used to identify the layer.
 data class LayerMeta(
@@ -54,7 +57,7 @@ data class LayerMeta(
         else
             "<Style isDefault=\"true\">_null</Style>"
 
-        val formatsPart = formats.joinToString("") { "<Format>$it</Format>" }
+        val formatsPart = formats.joinToString("") { "<Format>${it.getMime()}</Format>" }
 
         return "$firstPart$stylesPart$formatsPart".trimIndent()
     }
@@ -62,10 +65,18 @@ data class LayerMeta(
     companion object {
         fun fromXML(xml: String): LayerMeta {
             val title = xml.substringAfter("<ows:Title>").substringBefore("</ows:Title>")
-            val minX = xml.substringAfter("<ows:LowerCorner>").substringBefore(" ").toDouble()
-            val minY = xml.substringAfter("<ows:LowerCorner> ").substringBefore("</ows:LowerCorner>").toDouble()
-            val maxX = xml.substringAfter("<ows:UpperCorner>").substringBefore(" ").toDouble()
-            val maxY = xml.substringAfter("<ows:UpperCorner> ").substringBefore("</ows:UpperCorner>").toDouble()
+            val mins = xml.substringAfter("<ows:LowerCorner>").substringBefore("</ows:LowerCorner>")
+                .split(" ")
+                .map {
+                    it.toDouble()
+                }
+
+            val maxs = xml.substringAfter("<ows:UpperCorner>").substringBefore("</ows:UpperCorner>")
+                .split(" ")
+                .map {
+                    it.toDouble()
+                }
+
             val identifier = xml.substringAfter("<ows:Identifier>").substringBefore("</ows:Identifier>")
             val styles = xml.substringAfter("<Style isDefault=\"true\">").substringBefore("</Style>")
                 .split("</Style><Style isDefault=\"true\">")
@@ -76,7 +87,7 @@ data class LayerMeta(
                 .map { it.replace("</Format>", "").replace("<Format>", "") }
                 .map { TileFormat.fromMime(it)!! }
 
-            return LayerMeta(title, BoundingBox(minX, minY, maxX, maxY), identifier, styles, formats)
+            return LayerMeta(title, BoundingBox(mins[0], mins[1], maxs[0], maxs[1]), identifier, styles, formats)
         }
     }
 }

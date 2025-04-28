@@ -7,8 +7,11 @@ import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.WMTSServer
 import com.rasteroid.p2pmaps.tile.ExternalRasterRepository
+import com.rasteroid.p2pmaps.tile.LayerMeta
 import com.rasteroid.p2pmaps.tile.source.type.TrackerRasterSource
 import com.rasteroid.p2pmaps.ui.App
+import java.io.File
+import kotlin.io.path.Path
 
 private val log = Logger.withTag("main")
 
