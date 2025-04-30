@@ -130,7 +130,6 @@ class TrackerRasterSource(
         log.d("Announcing ${rawTMSs.size} TMSs to tracker")
 
         for (rawTMS in rawTMSs) {
-            log.d("Announcing rawTMS: $rawTMS")
             client.post("$remoteUrl/announce/tms") {
                 url {
                     parameter("peerid", Settings.PEER_ID)
@@ -147,7 +146,6 @@ class TrackerRasterSource(
         log.d("Announcing ${rawLayers.size} layers to tracker")
 
         for (rawLayer in rawLayers) {
-            log.d("Announcing rawLayer: $rawLayer")
             client.post("$remoteUrl/announce/layer") {
                 url {
                     parameter("peerid", Settings.PEER_ID)

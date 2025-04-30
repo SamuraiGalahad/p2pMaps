@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -41,8 +42,18 @@ class WMTSServer(
         return stream.bufferedReader().use { it.readText().replace("{{ contents }}", contents) }
     }
 
+    private fun getQueryParameter(
+        call: ApplicationCall,
+        name: String
+    ): String? {
+        // Ignore case.
+        return call.request.queryParameters[name.lowercase()]?.lowercase()
+            ?: call.request.queryParameters[name.uppercase()]?.lowercase()
+    }
+
     private suspend fun handleRequest(call: ApplicationCall) {
-        val service = call.request.queryParameters["service"]?.lowercase()
+        log.d("Handling WMTS request: ${call.request.uri}")
+        val service = getQueryParameter(call, "service")
         if (service == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing service parameter")
             return
@@ -53,7 +64,7 @@ class WMTSServer(
             return
         }
 
-        val request = call.request.queryParameters["request"]?.lowercase()
+        val request = getQueryParameter(call, "request")
         if (request == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing request parameter")
             return
@@ -75,37 +86,37 @@ class WMTSServer(
     }
 
     private suspend fun handleTileRequest(call: ApplicationCall) {
-        val layer = call.request.queryParameters["layer"]
+        val layer = getQueryParameter(call, "layer")
         if (layer == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing layer parameter")
             return
         }
 
-        val tileMatrixSet = call.request.queryParameters["TileMatrixSet"]
+        val tileMatrixSet = getQueryParameter(call, "tileMatrixSet")
         if (tileMatrixSet == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing TileMatrixSet parameter")
             return
         }
 
-        val tileMatrix = call.request.queryParameters["TileMatrix"]
+        val tileMatrix = getQueryParameter(call, "tileMatrix")
         if (tileMatrix == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing TileMatrix parameter")
             return
         }
 
-        val tileCol = call.request.queryParameters["TileCol"]?.toIntOrNull()
+        val tileCol = getQueryParameter(call, "tileCol")?.toIntOrNull()
         if (tileCol == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing TileCol parameter")
             return
         }
 
-        val tileRow = call.request.queryParameters["TileRow"]?.toIntOrNull()
+        val tileRow = getQueryParameter(call, "tileRow")?.toIntOrNull()
         if (tileRow == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing TileRow parameter")
             return
         }
 
-        val format = TileFormat.fromMime(call.request.queryParameters["Format"]?.lowercase() ?: "")
+        val format = TileFormat.fromMime(getQueryParameter(call, "format") ?: "")
         if (format == null) {
             call.respond(HttpStatusCode.BadRequest, "Unsupported format")
             return

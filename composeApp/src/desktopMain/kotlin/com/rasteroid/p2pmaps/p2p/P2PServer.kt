@@ -33,10 +33,10 @@ fun listen(
             handlePacket(socket, packet)
         }
     } catch (e: Exception) {
-        log.e("Error listening for peers", e)
+        log.e("Error listening for peer", e)
     } finally {
-        socket.close()
-        log.i("Stopped listening for peers")
+        if (!socket.isClosed) socket.close()
+        log.i("Stopped listening for peer")
     }
 }
 

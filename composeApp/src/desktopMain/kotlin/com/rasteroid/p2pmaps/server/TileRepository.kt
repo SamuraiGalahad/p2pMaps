@@ -231,7 +231,6 @@ class TileRepository(
     fun getTMSMeta(tms: String): TMSMeta? {
         // Essentially, read <tms>.xml inside the tms directory.
         val tmsPath = tmsDirectoryPath.resolve("$tms.xml")
-        log.d("resolved tms meta path: $tmsPath")
         return if (tmsPath.toFile().exists()) {
             val raw = tmsPath.toFile().readText()
             TMSMeta.fromXML(raw)
