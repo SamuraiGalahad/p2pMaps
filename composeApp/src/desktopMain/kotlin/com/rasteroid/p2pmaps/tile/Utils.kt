@@ -1,81 +1,66 @@
 package com.rasteroid.p2pmaps.tile
 
-import co.touchlab.kermit.Logger
-import fr.bmartel.speedtest.SpeedTestReport
-import fr.bmartel.speedtest.SpeedTestSocket
-import fr.bmartel.speedtest.inter.ISpeedTestListener
-import fr.bmartel.speedtest.model.SpeedTestError
-import kotlinx.coroutines.delay
-
-private val logger = Logger.withTag("tile utils")
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import kotlin.math.roundToLong
+import kotlin.system.measureTimeMillis
 
 data class InternetSpeedTestResult(
     val downloadSpeed: Long,
     val uploadSpeed: Long
 )
 
-private class SimpleSpeedTestListener : ISpeedTestListener {
-    var isCompleted = false
-        private set
-
-    var isError = false
-        private set
-
-    var transferRateBit = -1L
-        private set
-
-    override fun onCompletion(report: SpeedTestReport?) {
-        if (report == null) return
-        transferRateBit = report.transferRateBit.toLong()
-        isCompleted = true
+suspend fun getInternetSpeedTest(
+    httpClient: HttpClient,
+    downloadUrl: String,
+    uploadUrl: String
+): Result<InternetSpeedTestResult> {
+    val downloadResult = getInternetDownloadSpeed(httpClient, downloadUrl)
+    if (downloadResult.isFailure) {
+        return Result.failure(downloadResult.exceptionOrNull() ?: Exception("Unknown error"))
     }
 
-    override fun onProgress(percent: Float, report: SpeedTestReport?) {}
+    val uploadResult = getInternetUploadSpeed(httpClient, uploadUrl)
+    if (uploadResult.isFailure) {
+        return Result.failure(uploadResult.exceptionOrNull() ?: Exception("Unknown error"))
+    }
 
-    override fun onError(speedTestError: SpeedTestError?, errorMessage: String?) {
-        isError = true
-        isCompleted = true
+    val downloadSpeed = downloadResult.getOrThrow()
+    val uploadSpeed = uploadResult.getOrThrow()
+    return Result.success(InternetSpeedTestResult(downloadSpeed, uploadSpeed))
+}
+
+private suspend fun getInternetDownloadSpeed(
+    httpClient: HttpClient,
+    downloadUrl: String
+): Result<Long> {
+    return runCatching {
+        val downloadSizeMb = 10
+        val downloadTime = measureTimeMillis {
+            httpClient.get(downloadUrl) {
+                parameter("ckSize", downloadSizeMb) // 10Mb to download.
+            }
+        }
+        val speed = (downloadSizeMb * 1024 * 1024 * 8L) / (downloadTime * 0.001) // in bits per second
+        return@runCatching speed.roundToLong()
     }
 }
 
-suspend fun getInternetSpeedTest(): InternetSpeedTestResult {
-    val downloadSocket = SpeedTestSocket()
-    val uploadSocket = SpeedTestSocket()
-
-    val downloadListener = SimpleSpeedTestListener()
-    val uploadListener = SimpleSpeedTestListener()
-
-    downloadSocket.addSpeedTestListener(downloadListener)
-    uploadSocket.addSpeedTestListener(uploadListener)
-
-    // TODO: Maybe do something about hardcoding URLs, like moving them to config.
-    downloadSocket.startDownload("http://msk3.companion.t2.ru:8080/speedtest/random2000x2000.jpg")
-    uploadSocket.startUpload("http://msk3.companion.t2.ru:8080/speedtest/upload.php", 1_000_000)
-
-    while (!downloadListener.isCompleted || !uploadListener.isCompleted) {
-        delay(100)
+private suspend fun getInternetUploadSpeed(
+    httpClient: HttpClient,
+    uploadUrl: String
+): Result<Long> {
+    return runCatching {
+        val uploadSize = 10 * 1024 * 1024
+        val data = ByteArray(uploadSize) { 0 }
+        val uploadTime = measureTimeMillis {
+            httpClient.post(uploadUrl) {
+                contentType(ContentType.Application.OctetStream)
+                setBody(data)
+            }
+        }
+        val speed = (uploadSize * 8L) / (uploadTime * 0.001) // in bits per second
+        return@runCatching speed.roundToLong()
     }
-
-    var downloadSpeed = 0L
-    var uploadSpeed = 0L
-
-    if (!downloadListener.isError) {
-        downloadSpeed = downloadListener.transferRateBit
-    } else {
-        logger.e("Testing internet download speed failed")
-    }
-
-    if (!uploadListener.isError) {
-        uploadSpeed = uploadListener.transferRateBit
-    } else {
-        logger.e("Testing internet upload speed failed")
-    }
-
-    downloadSocket.closeSocket()
-    uploadSocket.closeSocket()
-
-    return InternetSpeedTestResult(
-        downloadSpeed = downloadSpeed,
-        uploadSpeed = uploadSpeed
-    )
 }

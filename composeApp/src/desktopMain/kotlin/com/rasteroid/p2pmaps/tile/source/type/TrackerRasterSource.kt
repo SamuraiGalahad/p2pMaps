@@ -6,6 +6,7 @@ import com.rasteroid.p2pmaps.p2p.*
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.server.dto.TrackerAnnouncePeerInfo
 import com.rasteroid.p2pmaps.server.dto.TrackerAskReply
+import com.rasteroid.p2pmaps.server.dto.TrackerAskReplyTile
 import com.rasteroid.p2pmaps.server.dto.TrackerCheckReply
 import com.rasteroid.p2pmaps.tile.LayerTMS
 import com.rasteroid.p2pmaps.tile.TileFormat
@@ -17,10 +18,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 
 private const val ANNOUNCE_PERIOD = 60_000L // 60 seconds
@@ -97,6 +95,21 @@ class TrackerRasterSource(
         scope.launch {
             while (scope.isActive) {
                 try {
+                    checkForPeerRequests(scope)
+                    isAlive = true
+                } catch (e: Exception) {
+                    isAlive = false
+                    log.e("Failed to check for peer requests: ${e.message}")
+                }
+                delay(PEER_DISCOVERY_PERIOD)
+            }
+        }
+        scope.launch {
+            // Initial delay to give time for the checkForPeerRequests
+            // to finish and potentially change isAlive.
+            delay(PEER_DISCOVERY_PERIOD)
+            while (scope.isActive) {
+                try {
                     announceTMSs()
                 } catch (e: Exception) {
                     log.e("Failed to announce TMSs to tracker")
@@ -105,6 +118,7 @@ class TrackerRasterSource(
             }
         }
         scope.launch {
+            delay(PEER_DISCOVERY_PERIOD)
             while (scope.isActive) {
                 try {
                     announceLayers()
@@ -115,6 +129,7 @@ class TrackerRasterSource(
             }
         }
         scope.launch {
+            delay(PEER_DISCOVERY_PERIOD)
             while (scope.isActive) {
                 try {
                     announcePeerInfo()
@@ -124,21 +139,13 @@ class TrackerRasterSource(
                 delay(ANNOUNCE_PERIOD)
             }
         }
-        scope.launch {
-            while (scope.isActive) {
-                try {
-                    checkForPeerRequests(scope)
-                    isAlive = true
-                } catch (e: Exception) {
-                    isAlive = false
-                    log.e("Failed to check for peer requests: ${e.message}")
-                }
-                delay(PEER_DISCOVERY_PERIOD)
-            }
-        }
     }
 
     private suspend fun announceTMSs() {
+        if (!isAlive) {
+            log.d("Tracker is not alive, skipping TMS announcement")
+            return
+        }
         val rawTMSs = TileRepository.instance.getAllTMSMetaRaw()
         log.d("Announcing ${rawTMSs.size} TMSs to tracker")
 
@@ -155,6 +162,10 @@ class TrackerRasterSource(
     }
 
     private suspend fun announceLayers() {
+        if (!isAlive) {
+            log.d("Tracker is not alive, skipping layer announcement")
+            return
+        }
         val rawLayers = TileRepository.instance.getAllLayersTMSLink()
         log.d("Announcing ${rawLayers.size} layers to tracker")
 
@@ -171,28 +182,50 @@ class TrackerRasterSource(
     }
 
     private suspend fun announcePeerInfo() {
+        if (!isAlive) {
+            log.d("Tracker is not alive, skipping peer info announcement")
+            return
+        }
+
         // Clean up old info about connected peers.
         connectedPeers.entries.removeIf { entry ->
             System.currentTimeMillis() - entry.value.lastTimeSeenMillis > 60_000L
         }
 
+        val speedTestDownloadUrl = client.get("$remoteUrl/speedtest/download")
+            .body<String>()
+
+        val speedTestUploadUrl = client.get("$remoteUrl/speedtest/upload")
+            .body<String>()
+
         log.d("Testing internet connection")
-        val internetSpeedTestResult = getInternetSpeedTest()
+        val internetSpeedTestResult = getInternetSpeedTest(
+            client,
+            speedTestDownloadUrl,
+            speedTestUploadUrl
+        )
+
+        if (internetSpeedTestResult.isFailure) {
+            log.e("Failed to test internet connection")
+            internetSpeedTestResult.exceptionOrNull()?.printStackTrace()
+            return
+        }
+
+        val internetSpeedTestActualResult = internetSpeedTestResult.getOrThrow()
 
         log.d("Announcing peer info to tracker")
         client.post("$remoteUrl/announce/peer") {
-            setBody {
+            contentType(ContentType.Application.Json)
+            setBody(
                 TrackerAnnouncePeerInfo(
                     peerId = Settings.PEER_ID,
                     connectedPeers = connectedPeers.map { it.value.peerId },
-                    internetDownloadSpeed = 0L,
-                    internetUploadSpeed = 0L
+                    internetDownloadSpeed = internetSpeedTestActualResult.downloadSpeed,
+                    internetUploadSpeed = internetSpeedTestActualResult.uploadSpeed
                 )
-            }
+            )
         }
     }
-
-    private suspend fun
 
     private suspend fun checkForPeerRequests(scope: CoroutineScope) {
         log.d("Checking for requests from other peers")
@@ -242,117 +275,173 @@ class TrackerRasterSource(
     override suspend fun download(
         layerTMS: LayerTMS,
         progressReport: (Int, Int) -> Unit
-    ) {
+    ) = coroutineScope {
         // Request peers for this raster.
         val askedPeers = askForPeers(layerTMS.layer, layerTMS.tileMatrixSet)
-        log.d("before udp hole punch")
 
-        // TODO: For now assume only working with one peer.
-        val peerConnection = askedPeers[0]
+        if (askedPeers.isEmpty()) {
+            log.d("No peers found for layer: ${layerTMS.layer}, tms: ${layerTMS.tileMatrixSet}")
+            return@coroutineScope
+        }
+
+        // We assume the main peer is given as the first one.
+        // We use the main peer to request layer and TMS metadata.
+        val deferredDownloads = askedPeers.mapIndexed { idx, peer ->
+            async {
+                val peerHost = peer.host
+                val peerPort = peer.port
+                val tilesToDownload = peer.tiles
+                downloadFromPeer(
+                    Settings.PEER_ID,
+                    peerHost,
+                    peerPort,
+                    layerTMS,
+                    tilesToDownload,
+                    progressReport,
+                    downloadMeta = idx == 0
+                )
+            }
+        }
+
+        // Wait for all peers to finish.
+        deferredDownloads.awaitAll()
+    }
+
+    private suspend fun downloadFromPeer(
+        key: String,
+        peerHost: String,
+        peerPort: Int,
+        layerTMS: LayerTMS,
+        tilesToDownload: TrackerAskReplyTile,
+        progressReport: (Int, Int) -> Unit,
+        downloadMeta: Boolean = false
+    ) {
+        val peerDebugLog: (msg: String) -> Unit = {
+            log.d("[peer $peerHost:$peerPort] $it")
+        }
+
+        val peerErrorLog: (msg: String) -> Unit = {
+            log.e("[peer $peerHost:$peerPort] $it")
+        }
 
         // Hole punch to the peer.
-        val (socket, address, port) = udpHolePunch(
-            peerConnection.key,
-            peerConnection.host,
-            peerConnection.port
-        ).getOrElse {
-            log.e("Failed to hole punch to peer, aborting download")
+        val holePunchResult = udpHolePunch(
+            key,
+            peerHost,
+            peerPort
+        )
+
+        if (holePunchResult.isFailure) {
+            peerErrorLog("Failed to hole punch to peer")
             return
         }
+
+        val holePunchActualResult = holePunchResult.getOrThrow()
+        val socket = holePunchActualResult.socket
+        val address = holePunchActualResult.peerAddress
+        val port = holePunchActualResult.peerPort
 
         // Exchange peers ids.
         // We actually don't need to save the other peer's id,
         // but the other peer needs it.
         val peerIdResult = exchangePeerIds(socket, address, port)
         if (peerIdResult.isFailure) {
-            log.e("Failed to exchange peer ids, aborting download")
+            peerErrorLog("Failed to exchange peer ids, aborting download")
             return
         }
 
-        // Request tile matrix set info from peer.
-        // We need it both to:
-        // - Loop through tiles to request them
-        // - Save tile matrix set info locally
-        val tmsMeta = requestTileMatrixSet(socket, address, port, layerTMS.tileMatrixSet)
-            .getOrElse {
-                log.e("Failed to get tile matrix set from peer, aborting download")
+        // Request layer and TMS meta if needed.
+        if (downloadMeta) {
+            val layerMetaRequestResult = requestLayer(socket, address, port, layerTMS.layer)
+            if (layerMetaRequestResult.isFailure) {
+                peerErrorLog("Failed to get layer from peer, aborting download")
                 return
-            }.tileMatrixSet
+            }
 
-        if (tmsMeta == null) {
-            log.e("Failed to get tile matrix set from peer, aborting download")
+            val layerMetaResult = layerMetaRequestResult.getOrThrow()
+            val raster = layerMetaResult.raster
+            if (raster == null) {
+                peerErrorLog("Failed to get layer from peer, aborting download")
+                return
+            }
+
+            val tmsMeta = requestTileMatrixSet(socket, address, port, layerTMS.tileMatrixSet)
+                .getOrElse {
+                    peerErrorLog("Failed to get tile matrix set from peer, aborting download")
+                    return
+                }.tileMatrixSet
+
+            if (tmsMeta == null) {
+                peerErrorLog("Failed to get tile matrix set from peer, aborting download")
+                return
+            }
+
+            // Save metadata to disk.
+            TileRepository.instance.saveLayerMeta(layerTMS.layer, raster)
+            TileRepository.instance.saveTMSMeta(
+                layerTMS.tileMatrixSet,
+                tmsMeta
+            )
+        }
+
+        val tileMatrix = tilesToDownload.tileMatrix
+        val format = TileFormat.fromMime(tilesToDownload.format)
+        if (format == null) {
+            peerErrorLog("Invalid tile format: ${tilesToDownload.format}, aborting download")
             return
         }
 
         // Loop through all tiles in the tile matrix set and request them.
-        val totalTiles = tmsMeta.tileMatrixes.sumOf { it.matrixHeight * it.matrixWidth }
+        val totalTiles = tilesToDownload.tileColsAndRows.size
         var tilesTransferred = 0
-        for (tileMatrix in tmsMeta.tileMatrixes) {
-            for (tileCol in 0 until tileMatrix.matrixHeight) {
-                for (tileRow in 0 until tileMatrix.matrixWidth) {
-                    // Request tile from peer.
-                    val tileMeta = TileMeta(
-                        layer = layerTMS.layer,
-                        tileMatrixSet = layerTMS.tileMatrixSet,
-                        tileMatrix = tileMatrix.identifier,
-                        tileRow = tileRow,
-                        tileCol = tileCol,
-                        format = TileFormat.PNG // TODO: For now, hardcoding .png as format.
-                    )
-
-                    val bytes = requestTile(
-                        socket,
-                        address,
-                        port,
-                        tileMeta
-                    ).getOrElse {
-                        log.e("Failed to get tile from peer, aborting download")
-                        return
-                    }
-
-                    log.d("Received tile, size: ${bytes.size} bytes")
-
-                    // Save the tile to disk.
-                    TileRepository.instance.saveTile(
-                        tileMeta,
-                        bytes
-                    )
-
-                    // Report progress.
-                    ++tilesTransferred
-                    progressReport(tilesTransferred, totalTiles)
-
-                    // A bit of a delay to not overwhelm the peer.
-                    delay(10)
-                }
+        for (tileColRow in tilesToDownload.tileColsAndRows) {
+            if (tileColRow.size != 2) {
+                peerErrorLog("Invalid tile col/row: $tileColRow, skipping tile")
+                continue
             }
+
+            val tileCol = tileColRow[0]
+            val tileRow = tileColRow[1]
+
+            // Request tile from peer.
+            val tileMeta = TileMeta(
+                layer = layerTMS.layer,
+                tileMatrixSet = layerTMS.tileMatrixSet,
+                tileMatrix = tileMatrix,
+                tileRow = tileRow,
+                tileCol = tileCol,
+                format = format
+            )
+
+            val bytes = requestTile(
+                socket,
+                address,
+                port,
+                tileMeta
+            ).getOrElse {
+                log.e("Failed to get tile from peer, aborting download")
+                return
+            }
+
+            peerDebugLog("Received tile, size: ${bytes.size} bytes")
+
+            // Save the tile to disk.
+            TileRepository.instance.saveTile(
+                tileMeta,
+                bytes
+            )
+
+            // Report progress.
+            ++tilesTransferred
+            progressReport(tilesTransferred, totalTiles)
+
+            // A bit of a delay to not overwhelm the peer.
+            delay(10)
         }
-
-        TileRepository.instance.saveTMSMeta(
-            layerTMS.tileMatrixSet,
-            tmsMeta
-        )
-
-        // Request layer info.
-        val layerMetaRequestResult = requestLayer(socket, address, port, layerTMS.layer)
-        if (layerMetaRequestResult.isFailure) {
-            log.e("Failed to get layer from peer, aborting download")
-            return
-        }
-
-        val layerMetaResult = layerMetaRequestResult.getOrThrow()
-        val raster = layerMetaResult.raster
-        if (raster == null) {
-            log.e("Failed to get layer from peer, aborting download")
-            return
-        }
-
-        TileRepository.instance.saveLayerMeta(layerTMS.layer, raster)
 
         // Send closing message.
         send(socket, address, port, Message.Close)
-
-        log.d("Successfully downloaded layer: ${layerTMS.layer}, tms: ${layerTMS.tileMatrixSet}")
+        log.i("Download completed, $tilesTransferred tiles transferred")
     }
 
     override fun hashCode(): Int {
