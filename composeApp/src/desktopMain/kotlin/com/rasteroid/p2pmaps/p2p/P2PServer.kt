@@ -1,14 +1,25 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
+import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.server.TileRepository
+import io.ktor.util.collections.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.InetAddress
 
 private val log = Logger.withTag("p2p listen")
+
+// Currently connected peers: internet address mapped to peer id.
+data class ConnectedPeerInfo(
+    val peerId: String,
+    var lastTimeSeenMillis: Long
+)
+
+val connectedPeers = ConcurrentMap<InetAddress, ConnectedPeerInfo>()
 
 private fun peerInfo(
     packet: DatagramPacket,
@@ -35,6 +46,8 @@ fun listen(
     } catch (e: Exception) {
         log.e("Error listening for peer", e)
     } finally {
+        // Update connected peer last time seen value.
+        connectedPeers[socket.inetAddress]?.lastTimeSeenMillis = System.currentTimeMillis()
         if (!socket.isClosed) socket.close()
         log.i("Stopped listening for peer")
     }
@@ -47,6 +60,7 @@ fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
     when (message) {
         is Message.Close -> handleClose(socket, packet)
         is Message.Ping -> handlePing(socket, packet)
+        is Message.PeerId -> handlePeerId(socket, packet, message)
         is Message.Layers -> handleLayers(socket, packet)
         is Message.Layer -> handleLayer(socket, packet, message)
         is Message.TileMatrixSet -> handleTileMatrixSet(socket, packet, message)
@@ -68,6 +82,19 @@ private fun handlePing(
     socket: DatagramSocket,
     packet: DatagramPacket
 ) = send(socket, packet.address, packet.port, Message.Pong)
+
+private fun handlePeerId(
+    socket: DatagramSocket,
+    packet: DatagramPacket,
+    message: Message.PeerId
+) {
+    peerInfo(packet, "Peer ID: ${message.peerId}")
+    connectedPeers[socket.inetAddress] = ConnectedPeerInfo(
+        message.peerId,
+        System.currentTimeMillis()
+    )
+    send(socket, packet.address, packet.port, Message.PeerId(Settings.PEER_ID))
+}
 
 private fun handleLayers(
     socket: DatagramSocket,

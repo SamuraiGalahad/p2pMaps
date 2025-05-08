@@ -4,10 +4,13 @@ import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.p2p.*
 import com.rasteroid.p2pmaps.server.TileRepository
-import com.rasteroid.p2pmaps.server.dto.TrackerPeerConnection
+import com.rasteroid.p2pmaps.server.dto.TrackerAnnouncePeerInfo
+import com.rasteroid.p2pmaps.server.dto.TrackerAskReply
+import com.rasteroid.p2pmaps.server.dto.TrackerCheckReply
 import com.rasteroid.p2pmaps.tile.LayerTMS
 import com.rasteroid.p2pmaps.tile.TileFormat
 import com.rasteroid.p2pmaps.tile.TileMeta
+import com.rasteroid.p2pmaps.tile.getInternetSpeedTest
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -114,6 +117,16 @@ class TrackerRasterSource(
         scope.launch {
             while (scope.isActive) {
                 try {
+                    announcePeerInfo()
+                } catch (e: Exception) {
+                    log.e("Failed to announce peer info to tracker")
+                }
+                delay(ANNOUNCE_PERIOD)
+            }
+        }
+        scope.launch {
+            while (scope.isActive) {
+                try {
                     checkForPeerRequests(scope)
                     isAlive = true
                 } catch (e: Exception) {
@@ -157,6 +170,30 @@ class TrackerRasterSource(
         }
     }
 
+    private suspend fun announcePeerInfo() {
+        // Clean up old info about connected peers.
+        connectedPeers.entries.removeIf { entry ->
+            System.currentTimeMillis() - entry.value.lastTimeSeenMillis > 60_000L
+        }
+
+        log.d("Testing internet connection")
+        val internetSpeedTestResult = getInternetSpeedTest()
+
+        log.d("Announcing peer info to tracker")
+        client.post("$remoteUrl/announce/peer") {
+            setBody {
+                TrackerAnnouncePeerInfo(
+                    peerId = Settings.PEER_ID,
+                    connectedPeers = connectedPeers.map { it.value.peerId },
+                    internetDownloadSpeed = 0L,
+                    internetUploadSpeed = 0L
+                )
+            }
+        }
+    }
+
+    private suspend fun
+
     private suspend fun checkForPeerRequests(scope: CoroutineScope) {
         log.d("Checking for requests from other peers")
         val response = client.get("$remoteUrl/peers/check") {
@@ -169,7 +206,7 @@ class TrackerRasterSource(
             return
         }
 
-        val result = response.body<TrackerPeerConnection>()
+        val result = response.body<TrackerCheckReply>()
 
         scope.launch {
             val punchResult = udpHolePunch(
@@ -188,10 +225,10 @@ class TrackerRasterSource(
         }
     }
 
-    private suspend fun getPeerSessionKey(
+    private suspend fun askForPeers(
         layer: String,
         tileMatrixSet: String
-    ): TrackerPeerConnection {
+    ): List<TrackerAskReply> {
         return client
             .get("$remoteUrl/peers/ask") {
                 url {
@@ -199,7 +236,7 @@ class TrackerRasterSource(
                     parameter("layer", layer)
                     parameter("tms", tileMatrixSet)
                 }
-            }.body<TrackerPeerConnection>()
+            }.body<List<TrackerAskReply>>()
     }
 
     override suspend fun download(
@@ -207,8 +244,12 @@ class TrackerRasterSource(
         progressReport: (Int, Int) -> Unit
     ) {
         // Request peers for this raster.
-        val peerConnection = getPeerSessionKey(layerTMS.layer, layerTMS.tileMatrixSet)
+        val askedPeers = askForPeers(layerTMS.layer, layerTMS.tileMatrixSet)
         log.d("before udp hole punch")
+
+        // TODO: For now assume only working with one peer.
+        val peerConnection = askedPeers[0]
+
         // Hole punch to the peer.
         val (socket, address, port) = udpHolePunch(
             peerConnection.key,
@@ -216,6 +257,15 @@ class TrackerRasterSource(
             peerConnection.port
         ).getOrElse {
             log.e("Failed to hole punch to peer, aborting download")
+            return
+        }
+
+        // Exchange peers ids.
+        // We actually don't need to save the other peer's id,
+        // but the other peer needs it.
+        val peerIdResult = exchangePeerIds(socket, address, port)
+        if (peerIdResult.isFailure) {
+            log.e("Failed to exchange peer ids, aborting download")
             return
         }
 

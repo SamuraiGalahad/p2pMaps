@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.config.ensureDirectoryExists
-import com.rasteroid.p2pmaps.server.dto.TrackerAnnounce
 import com.rasteroid.p2pmaps.tile.*
 import java.nio.file.Path
 import kotlin.concurrent.fixedRateTimer
@@ -257,14 +256,6 @@ class TileRepository(
         }
         ensureDirectoryExists(tmsPath.parent)
         tmsPath.toFile().writeText(tmsMeta.toXML())
-    }
-
-    fun getAnnounce(): TrackerAnnounce {
-        // TODO.
-        return TrackerAnnounce(
-            uuid = "test",
-            layers = listOf()
-        )
     }
 
     fun getContents(): String {

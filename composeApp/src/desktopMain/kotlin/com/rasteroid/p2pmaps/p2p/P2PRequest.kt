@@ -1,6 +1,7 @@
 package com.rasteroid.p2pmaps.p2p
 
 import co.touchlab.kermit.Logger
+import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.tile.TileMeta
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
@@ -14,6 +15,12 @@ private const val SOCKET_TIMEOUT_MILLIS = 15 * 1000
 
 private val log = Logger.withTag("p2p request")
 
+data class HolePunchResult(
+    val socket: DatagramSocket,
+    val peerAddress: InetAddress,
+    val peerPort: Int
+)
+
 fun getSocketOnAnyAvailablePort(timeout: Int = SOCKET_TIMEOUT_MILLIS): DatagramSocket {
     val socket = DatagramSocket(0)
     socket.soTimeout = timeout
@@ -23,8 +30,8 @@ fun getSocketOnAnyAvailablePort(timeout: Int = SOCKET_TIMEOUT_MILLIS): DatagramS
 fun udpHolePunch(
     connectionKey: String,
     peerDiscoveryUrl: String,
-    peerDiscoveryPort: Int
-): Result<Triple<DatagramSocket, InetAddress, Int>> {
+    peerDiscoveryPort: Int,
+): Result<HolePunchResult> {
     // Contacting discovery UDP socket on tracker
     // and trying to establish a connection to a peer by UDP hole punching.
     val socket = getSocketOnAnyAvailablePort()
@@ -64,8 +71,14 @@ fun udpHolePunch(
         sendAndWaitForReply<Message.Pong>(socket, peerAddress, peerPort, Message.Ping)
     }
 
-    return Result.success(Triple(socket, peerAddress, peerPort))
+    return Result.success(HolePunchResult(socket, peerAddress, peerPort))
 }
+
+fun exchangePeerIds(
+    socket: DatagramSocket,
+    address: InetAddress,
+    port: Int
+) = sendAndWaitForReply<Message.PeerId>(socket, address, port, Message.PeerId(Settings.PEER_ID))
 
 fun requestLayersTMS(
     socket: DatagramSocket,

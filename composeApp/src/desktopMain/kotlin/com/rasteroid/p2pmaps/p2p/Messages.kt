@@ -19,6 +19,10 @@ sealed class Message {
     data object Pong : Message()
 
     @Serializable
+    @SerialName("message.peerId")
+    data class PeerId(val peerId: String) : Message()
+
+    @Serializable
     @SerialName("messages.close")
     data object Close : Message()
 

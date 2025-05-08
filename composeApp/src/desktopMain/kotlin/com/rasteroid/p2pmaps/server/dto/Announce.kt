@@ -4,25 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class TrackerAnnounce(
-    val uuid: String,
-    val layers: List<TrackerLayer>
-)
-
-@Serializable
-data class TrackerLayer(
-    val name: String,
-    @SerialName("type")
-    val tileMatrixSet: String,
-    val matrix: MutableMap<String, MutableList<TrackerTile>> = mutableMapOf()
-)
-
-@Serializable
-data class TrackerTile(
-    @SerialName("n")
-    val col: Int,
-    @SerialName("m")
-    val row: Int,
-    @SerialName("type")
-    val format: String
+data class TrackerAnnouncePeerInfo(
+    @SerialName("peerid")
+    val peerId: String,
+    // Connected peer ids.
+    val connectedPeers: List<String>,
+    // Speed in bit/s.
+    val internetDownloadSpeed: Long,
+    // Speed in bit/s.
+    val internetUploadSpeed: Long,
 )
