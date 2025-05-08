@@ -58,7 +58,7 @@ fun App() {
                 }
             }
             Surface(
-                modifier = Modifier.padding(10.dp)
+                modifier = Modifier.padding(8.dp)
             ) {
                 when (currentScreen) {
                     AppScreen.INTERNAL_RASTERS -> InternalRastersScreen(internalRasterVM)

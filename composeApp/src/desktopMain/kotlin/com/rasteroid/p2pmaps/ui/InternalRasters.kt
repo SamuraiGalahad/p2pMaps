@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ImageSearch
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.rasteroid.p2pmaps.config.Settings
 import com.rasteroid.p2pmaps.server.ProgressLayerTMS
 import com.rasteroid.p2pmaps.vm.InternalRastersViewModel
 import kotlin.math.floor
@@ -54,15 +56,38 @@ fun NoInternalRastersFound() {
 fun RastersGrid(
     rasters: List<ProgressLayerTMS>,
 ) {
-    // Create a grid of fixed size cards, going from left to right, top to bottom.
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 300.dp),
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(rasters) { progressRaster ->
-            ProgressRasterCard(progressRaster)
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Create a grid of fixed size cards, going from left to right, top to bottom.
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 300.dp),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(rasters) { progressRaster ->
+                    ProgressRasterCard(progressRaster)
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val wmtsUrl = "localhost:${Settings.APP_CONFIG.localWMTSServerPort}/wmts"
+                Text(
+                    text = "Tiles are served via WMTS at ",
+                )
+            SelectionContainer {
+                Text(
+                    text = wmtsUrl,
+                    color = MaterialTheme.colors.primary
+                )
+            }
         }
     }
 }
