@@ -18,7 +18,6 @@ fun RasterCard(
 ) {
     // A simple reusable card that displays in centered in column
     // layer, tms and some provided content.
-
     Card(
         // Add max size to it
         modifier = Modifier.size(
@@ -33,7 +32,6 @@ fun RasterCard(
             )
             Spacer(modifier = Modifier.size(8.dp))
             Text("Tile Matrix Set: $tms")
-            Spacer(modifier = Modifier.size(8.dp))
             content()
         }
     }

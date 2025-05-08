@@ -80,6 +80,7 @@ fun DownloadRasterCard(
     sourcedLayerTMS: SourcedLayerTMS,
     onDownloadClick: (SourcedLayerTMS) -> Unit
 ) {
+    Spacer(modifier = Modifier.size(16.dp))
     RasterCard(
         sourcedLayerTMS.layerTMS.layer,
         sourcedLayerTMS.layerTMS.tileMatrixSet

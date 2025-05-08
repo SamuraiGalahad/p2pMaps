@@ -4,15 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.Text
+import androidx.compose.foundation.progressSemantics
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.rasteroid.p2pmaps.server.ProgressLayerTMS
@@ -71,15 +72,35 @@ fun ProgressRasterCard(
     progressRaster: ProgressLayerTMS
 ) {
     val layerTMS = progressRaster.layerTMS
-    val progressPercentage = floor(progressRaster.current / progressRaster.total.toFloat()) * 100
+    val progress = progressRaster.current / progressRaster.total.toFloat()
+    val progressPercentage = floor(progress * 100)
 
     RasterCard(
         layer = layerTMS.layer,
         tms = layerTMS.tileMatrixSet
     ) {
-        Text(
-            text = "${progressRaster.current}/${progressRaster.total} ($progressPercentage%)",
-            modifier = Modifier.padding(8.dp)
-        )
+        Spacer(modifier = Modifier.size(16.dp))
+        Box(
+            // fill max width, but have a bit of an indent from the sides
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .fillMaxWidth()
+                .height(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LinearProgressIndicator(
+                progress,
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(6.dp))
+                    .progressSemantics(progress)
+            )
+
+            Text(
+                text = "${progressRaster.current}/${progressRaster.total} tiles ($progressPercentage%)",
+                style = MaterialTheme.typography.subtitle1,
+                color = MaterialTheme.colors.onPrimary.copy(alpha = 0.75f)
+            )
+        }
     }
 }
