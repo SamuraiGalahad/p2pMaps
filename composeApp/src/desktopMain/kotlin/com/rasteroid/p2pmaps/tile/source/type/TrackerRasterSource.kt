@@ -239,22 +239,23 @@ class TrackerRasterSource(
             return
         }
 
-        val result = response.body<TrackerCheckReply>()
+        val replies = response.body<List<TrackerCheckReply>>()
+        for (reply in replies) {
+            scope.launch {
+                val punchResult = udpHolePunch(
+                    reply.key,
+                    reply.host,
+                    reply.port
+                )
+                if (punchResult.isFailure) {
+                    log.e("Failed to hole punch to peer")
+                    return@launch
+                }
 
-        scope.launch {
-            val punchResult = udpHolePunch(
-                result.key,
-                result.host,
-                result.port
-            )
-            if (punchResult.isFailure) {
-                log.e("Failed to hole punch to peer")
-                return@launch
+                log.d("Successfully hole punched to peer")
+                val (socket, _, _) = punchResult.getOrThrow()
+                listen(socket)
             }
-
-            log.d("Successfully hole punched to peer")
-            val (socket, _, _) = punchResult.getOrThrow()
-            listen(socket)
         }
     }
 
@@ -288,11 +289,12 @@ class TrackerRasterSource(
         // We use the main peer to request layer and TMS metadata.
         val deferredDownloads = askedPeers.mapIndexed { idx, peer ->
             async {
+                val peerKey = peer.key
                 val peerHost = peer.host
                 val peerPort = peer.port
                 val tilesToDownload = peer.tiles
                 downloadFromPeer(
-                    Settings.PEER_ID,
+                    peerKey,
                     peerHost,
                     peerPort,
                     layerTMS,
