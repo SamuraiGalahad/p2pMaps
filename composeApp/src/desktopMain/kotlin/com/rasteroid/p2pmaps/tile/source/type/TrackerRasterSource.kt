@@ -312,7 +312,7 @@ class TrackerRasterSource(
         peerHost: String,
         peerPort: Int,
         layerTMS: LayerTMS,
-        tilesToDownload: TrackerAskReplyTile,
+        tilesToDownload: List<TrackerAskReplyTile>,
         progressReport: (Int, Int) -> Unit,
         downloadMeta: Boolean = false
     ) {
@@ -384,59 +384,61 @@ class TrackerRasterSource(
             )
         }
 
-        val tileMatrix = tilesToDownload.tileMatrix
-        val format = TileFormat.fromMime(tilesToDownload.format)
-        if (format == null) {
-            peerErrorLog("Invalid tile format: ${tilesToDownload.format}, aborting download")
-            return
-        }
-
         // Loop through all tiles in the tile matrix set and request them.
-        val totalTiles = tilesToDownload.tileColsAndRows.size
+        val totalTiles = tilesToDownload.sumOf { it.tileColsAndRows.size }
         var tilesTransferred = 0
-        for (tileColRow in tilesToDownload.tileColsAndRows) {
-            if (tileColRow.size != 2) {
-                peerErrorLog("Invalid tile col/row: $tileColRow, skipping tile")
-                continue
-            }
-
-            val tileCol = tileColRow[0]
-            val tileRow = tileColRow[1]
-
-            // Request tile from peer.
-            val tileMeta = TileMeta(
-                layer = layerTMS.layer,
-                tileMatrixSet = layerTMS.tileMatrixSet,
-                tileMatrix = tileMatrix,
-                tileRow = tileRow,
-                tileCol = tileCol,
-                format = format
-            )
-
-            val bytes = requestTile(
-                socket,
-                address,
-                port,
-                tileMeta
-            ).getOrElse {
-                log.e("Failed to get tile from peer, aborting download")
+        for (tilePartToDownload in tilesToDownload) {
+            val tileMatrix = tilePartToDownload.tileMatrix
+            val format = TileFormat.fromMime(tilePartToDownload.format)
+            if (format == null) {
+                peerErrorLog("Invalid tile format: ${tilePartToDownload.format}, aborting download")
                 return
             }
 
-            peerDebugLog("Received tile, size: ${bytes.size} bytes")
+            for (tileColRow in tilePartToDownload.tileColsAndRows) {
+                if (tileColRow.size != 2) {
+                    peerErrorLog("Invalid tile col/row: $tileColRow, skipping tile")
+                    continue
+                }
 
-            // Save the tile to disk.
-            TileRepository.instance.saveTile(
-                tileMeta,
-                bytes
-            )
+                val tileCol = tileColRow[0]
+                val tileRow = tileColRow[1]
 
-            // Report progress.
-            ++tilesTransferred
-            progressReport(tilesTransferred, totalTiles)
+                // Request tile from peer.
+                val tileMeta = TileMeta(
+                    layer = layerTMS.layer,
+                    tileMatrixSet = layerTMS.tileMatrixSet,
+                    tileMatrix = tileMatrix,
+                    tileRow = tileRow,
+                    tileCol = tileCol,
+                    format = format
+                )
 
-            // A bit of a delay to not overwhelm the peer.
-            delay(10)
+                val bytes = requestTile(
+                    socket,
+                    address,
+                    port,
+                    tileMeta
+                ).getOrElse {
+                    log.e("Failed to get tile from peer, aborting download")
+                    return
+                }
+
+                peerDebugLog("Received tile, size: ${bytes.size} bytes")
+
+                // Save the tile to disk.
+                TileRepository.instance.saveTile(
+                    tileMeta,
+                    bytes
+                )
+
+                // Report progress.
+                ++tilesTransferred
+                progressReport(tilesTransferred, totalTiles)
+
+                // A bit of a delay to not overwhelm the peer.
+                delay(10)
+            }
         }
 
         // Send closing message.
