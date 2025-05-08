@@ -219,7 +219,7 @@ class TileRepository(
             // We don't need to edit any meta if it already exists.
             return
         }
-        ensureDirectoryExists(layerPath.parent)
+        ensureDirectoryExists(layerPath)
         infoPath.toFile().writeText(layerMeta.toXML())
     }
 

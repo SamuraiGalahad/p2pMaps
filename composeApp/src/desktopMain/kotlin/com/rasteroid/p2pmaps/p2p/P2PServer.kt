@@ -46,8 +46,6 @@ fun listen(
     } catch (e: Exception) {
         log.e("Error listening for peer", e)
     } finally {
-        // Update connected peer last time seen value.
-        connectedPeers[socket.inetAddress]?.lastTimeSeenMillis = System.currentTimeMillis()
         if (!socket.isClosed) socket.close()
         log.i("Stopped listening for peer")
     }
@@ -55,6 +53,9 @@ fun listen(
 
 @OptIn(ExperimentalSerializationApi::class)
 fun handlePacket(socket: DatagramSocket, packet: DatagramPacket) {
+    // Update connected peer last time seen value.
+    connectedPeers[packet.address]?.lastTimeSeenMillis = System.currentTimeMillis()
+
     val message = ProtoBuf.decodeFromByteArray<Message>(packet.data)
     peerInfo(packet, "Received ${message.javaClass.simpleName}")
     when (message) {
@@ -89,7 +90,7 @@ private fun handlePeerId(
     message: Message.PeerId
 ) {
     peerInfo(packet, "Peer ID: ${message.peerId}")
-    connectedPeers[socket.inetAddress] = ConnectedPeerInfo(
+    connectedPeers[packet.address] = ConnectedPeerInfo(
         message.peerId,
         System.currentTimeMillis()
     )
