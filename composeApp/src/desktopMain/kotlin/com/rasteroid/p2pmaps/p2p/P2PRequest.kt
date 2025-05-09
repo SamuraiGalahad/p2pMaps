@@ -142,6 +142,7 @@ fun requestTile(
     var offset = 0
     while (offset < tile.size) {
         val chunkSize = minOf(1024, tile.size - offset)
+        log.d("Requesting tile chunk, offset: $offset, size: $chunkSize")
         val reply = sendAndWaitForReply<Message.TileReply>(
             socket,
             address,

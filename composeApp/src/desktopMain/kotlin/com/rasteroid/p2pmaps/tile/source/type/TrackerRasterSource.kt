@@ -189,7 +189,7 @@ class TrackerRasterSource(
 
         // Clean up old info about connected peers.
         connectedPeers.entries.removeIf { entry ->
-            System.currentTimeMillis() - entry.value.lastTimeSeenMillis > 60_000L
+            System.currentTimeMillis() - entry.value.lastTimeSeenMillis > 120_000L
         }
 
         val speedTestDownloadUrl = client.get("$remoteUrl/speedtest/download")
