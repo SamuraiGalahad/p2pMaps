@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.Button
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
@@ -18,12 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import co.touchlab.kermit.Logger
 import com.rasteroid.p2pmaps.server.TileRepository
 import com.rasteroid.p2pmaps.tile.SourcedLayerTMS
 import com.rasteroid.p2pmaps.vm.ExternalRastersViewModel
-
-private val log = Logger.withTag("external rasters screen")
 
 @Composable
 fun BrowseRastersScreen(
@@ -63,9 +57,10 @@ fun RasterGridScreen(
 ) {
     // A simple 2-column grid
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 200.dp),
+        columns = GridCells.Adaptive(minSize = 300.dp),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(rasters) { sourcedRasterMeta ->
             DownloadRasterCard(sourcedRasterMeta) {
@@ -80,20 +75,28 @@ fun DownloadRasterCard(
     sourcedLayerTMS: SourcedLayerTMS,
     onDownloadClick: (SourcedLayerTMS) -> Unit
 ) {
-    Spacer(modifier = Modifier.size(16.dp))
     RasterCard(
         sourcedLayerTMS.layerTMS.layer,
         sourcedLayerTMS.layerTMS.tileMatrixSet
     ) {
-        Text(text = "Source: ${sourcedLayerTMS.source.name}")
-        Spacer(modifier = Modifier.height(8.dp))
-        log.d("button: ${sourcedLayerTMS.layerTMS} repo: ${TileRepository.instance.layers}")
+        Text(
+            "Source: ${sourcedLayerTMS.source.name}"
+        )
         Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            shape = MaterialTheme.shapes.small,
             enabled = sourcedLayerTMS.source.isAlive
                     && !TileRepository.instance.layers.contains(sourcedLayerTMS.layerTMS),
+            contentPadding = PaddingValues(0.dp),
             onClick = { onDownloadClick(sourcedLayerTMS) }
         ) {
-            Text("Download")
+            Text(
+                "Download",
+                //style = MaterialTheme.typography.subtitle1,
+                //color = MaterialTheme.colors.onPrimary.copy(alpha = 0.75f)
+            )
         }
     }
 }

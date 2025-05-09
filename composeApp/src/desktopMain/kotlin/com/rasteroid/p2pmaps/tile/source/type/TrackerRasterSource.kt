@@ -27,7 +27,7 @@ private const val PEER_DISCOVERY_PERIOD = 10_000L // 10 seconds
 class TrackerRasterSource(
     val remoteUrl: String
 ) : RasterSource(
-    "Tracker",
+    "Tracker $remoteUrl",
     RasterSourceType.PEER
 ) {
     private val log = Logger.withTag("tracker $remoteUrl")
